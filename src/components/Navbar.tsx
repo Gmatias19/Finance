@@ -6,10 +6,7 @@ import {
   PieChart as PieChartIcon,
   Target,
   BarChart3,
-  Plus,
-  Download,
   Calendar,
-  Database,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { formatMonthYear } from '../utils/formatters';
@@ -21,10 +18,10 @@ interface NavbarProps {
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
   availableMonths: string[];
-  onOpenNewTransaction: () => void;
-  onOpenExportImport: () => void;
-  supabaseSync: SupabaseSyncState;
-  onOpenSupabaseSync: () => void;
+  onOpenNewTransaction?: () => void;
+  onOpenExportImport?: () => void;
+  supabaseSync?: SupabaseSyncState;
+  onOpenSupabaseSync?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -33,10 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedMonth,
   setSelectedMonth,
   availableMonths,
-  onOpenNewTransaction,
-  onOpenExportImport,
-  supabaseSync,
-  onOpenSupabaseSync,
 }) => {
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Visão Geral', icon: <LayoutDashboard size={18} /> },
@@ -89,59 +82,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ))}
                 </select>
               </div>
-
-              {/* Supabase Status Button */}
-              <button
-                id="btn-supabase-status"
-                onClick={onOpenSupabaseSync}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
-                title="Banco de Dados Supabase (Nuvem)"
-                aria-label="Status Supabase"
-              >
-                <Database
-                  size={15}
-                  className={
-                    supabaseSync.status === 'connected'
-                      ? 'text-sky-400'
-                      : supabaseSync.status === 'needs_setup'
-                      ? 'text-amber-400'
-                      : 'text-slate-400'
-                  }
-                />
-                <span className="hidden md:inline">Supabase</span>
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    supabaseSync.status === 'connected'
-                      ? 'bg-sky-400 animate-pulse'
-                      : supabaseSync.status === 'needs_setup'
-                      ? 'bg-amber-400'
-                      : 'bg-slate-500'
-                  }`}
-                />
-              </button>
-
-              {/* Backup Button */}
-              <button
-                id="btn-backup-export"
-                onClick={onOpenExportImport}
-                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white transition-colors text-xs font-medium flex items-center gap-1 cursor-pointer"
-                title="Backup e Exportação"
-                aria-label="Backup"
-              >
-                <Download size={15} />
-                <span className="hidden lg:inline">Backup</span>
-              </button>
-
-              {/* New Transaction Button (Azul Baleia) */}
-              <button
-                id="btn-new-transaction"
-                onClick={onOpenNewTransaction}
-                className="px-2.5 sm:px-3.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 active:scale-95 text-white font-semibold text-xs sm:text-sm flex items-center gap-1 shadow-sm shadow-sky-950/40 transition-all cursor-pointer"
-              >
-                <Plus size={16} className="stroke-[2.5]" />
-                <span className="hidden sm:inline">Nova Transação</span>
-                <span className="sm:hidden">Novo</span>
-              </button>
             </div>
           </div>
 
