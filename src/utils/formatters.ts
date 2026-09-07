@@ -72,6 +72,19 @@ export const getCurrentYearMonth = (): string => {
   return `${year}-${month}`;
 };
 
+// Calculate previous or next month (delta: -1 for previous, +1 for next)
+export const getAdjacentMonth = (yearMonthString: string, delta: number): string => {
+  let base = yearMonthString;
+  if (!base || base === 'all') {
+    base = getCurrentYearMonth();
+  }
+  const [year, month] = base.split('-').map(Number);
+  const date = new Date(year, month - 1 + delta, 1);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+};
+
 // Human payment method names
 export const paymentMethodLabels: Record<string, string> = {
   pix: 'Pix',

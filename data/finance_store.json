@@ -1,0 +1,138 @@
+{
+  "transactions": [],
+  "categories": [
+    {
+      "id": "cat_alimentacao",
+      "name": "Alimentação",
+      "type": "expense",
+      "icon": "Utensils",
+      "color": "#f97316",
+      "bgColor": "#fff7ed"
+    },
+    {
+      "id": "cat_moradia",
+      "name": "Moradia & Contas",
+      "type": "expense",
+      "icon": "Home",
+      "color": "#0284c7",
+      "bgColor": "#f0f9ff"
+    },
+    {
+      "id": "cat_transporte",
+      "name": "Transporte",
+      "type": "expense",
+      "icon": "Car",
+      "color": "#6366f1",
+      "bgColor": "#eef2ff"
+    },
+    {
+      "id": "cat_lazer",
+      "name": "Lazer & Entretenimento",
+      "type": "expense",
+      "icon": "PartyPopper",
+      "color": "#ec4899",
+      "bgColor": "#fdf2f8"
+    },
+    {
+      "id": "cat_saude",
+      "name": "Saúde & Bem-estar",
+      "type": "expense",
+      "icon": "HeartPulse",
+      "color": "#ef4444",
+      "bgColor": "#fef2f2"
+    },
+    {
+      "id": "cat_educacao",
+      "name": "Educação",
+      "type": "expense",
+      "icon": "GraduationCap",
+      "color": "#06b6d4",
+      "bgColor": "#ecfeff"
+    },
+    {
+      "id": "cat_compras",
+      "name": "Compras & Vestuário",
+      "type": "expense",
+      "icon": "ShoppingBag",
+      "color": "#eab308",
+      "bgColor": "#fefce8"
+    },
+    {
+      "id": "cat_servicos",
+      "name": "Assinaturas & Serviços",
+      "type": "expense",
+      "icon": "Tv",
+      "color": "#8b5cf6",
+      "bgColor": "#f5f3ff"
+    },
+    {
+      "id": "cat_despesa_outros",
+      "name": "Outras Despesas",
+      "type": "expense",
+      "icon": "MoreHorizontal",
+      "color": "#64748b",
+      "bgColor": "#f8fafc"
+    },
+    {
+      "id": "cat_salario",
+      "name": "Salário & Pró-labore",
+      "type": "income",
+      "icon": "Briefcase",
+      "color": "#0284c7",
+      "bgColor": "#f0f9ff"
+    },
+    {
+      "id": "cat_freelance",
+      "name": "Freelance & Serviços",
+      "type": "income",
+      "icon": "Laptop",
+      "color": "#0ea5e9",
+      "bgColor": "#f0f9ff"
+    },
+    {
+      "id": "cat_investimentos",
+      "name": "Rendimentos & Dividendos",
+      "type": "income",
+      "icon": "TrendingUp",
+      "color": "#0369a1",
+      "bgColor": "#f0f9ff"
+    },
+    {
+      "id": "cat_receita_outros",
+      "name": "Outras Receitas",
+      "type": "income",
+      "icon": "Coins",
+      "color": "#38bdf8",
+      "bgColor": "#f0f9ff"
+    }
+  ],
+  "budgets": [],
+  "goals": [],
+  "accounts": [
+    {
+      "id": "acc_principal",
+      "name": "Conta Corrente Principal",
+      "type": "checking",
+      "balance": 0,
+      "institution": "Banco Principal",
+      "color": "#0284c7"
+    },
+    {
+      "id": "acc_reserva",
+      "name": "Conta Reserva / Poupança",
+      "type": "savings",
+      "balance": 0,
+      "institution": "Reserva",
+      "color": "#0ea5e9"
+    },
+    {
+      "id": "acc_carteira",
+      "name": "Carteira Dinheiro Físico",
+      "type": "wallet",
+      "balance": 0,
+      "institution": "Dinheiro",
+      "color": "#38bdf8"
+    }
+  ],
+  "lastUpdated": "2026-09-07T21:53:23.690Z"
+}

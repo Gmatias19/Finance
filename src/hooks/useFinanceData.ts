@@ -45,11 +45,12 @@ export function useFinanceData() {
   const [budgets, setBudgets] = useState<Budget[]>(DEFAULT_BUDGETS);
   const [goals, setGoals] = useState<FinancialGoal[]>(DEFAULT_GOALS);
   const [accounts, setAccounts] = useState<FinancialAccount[]>(DEFAULT_ACCOUNTS);
+  const [liveStatus, setLiveStatus] = useState<'connected' | 'connecting' | 'offline'>('connecting');
 
-  // Supabase sync state
+  // Supabase sync state (optional auxiliary cloud backup)
   const [supabaseSync, setSupabaseSync] = useState<SupabaseSyncState>({
     status: 'checking',
-    message: 'Verificando conexão com o Supabase...',
+    message: 'Sincronização em tempo real ativa.',
   });
 
   // Filter state
@@ -63,80 +64,206 @@ export function useFinanceData() {
     sortBy: 'date-desc',
   });
 
-  // Initialize data from local cache and check Supabase
-  useEffect(() => {
-    let initialTransactions = DEFAULT_TRANSACTIONS;
+  // Fetch data from authoritative server
+  const fetchServerData = useCallback(async (isInitial = false) => {
     try {
-      localStorage.removeItem('controle_financeiro_data_v2');
-      localStorage.removeItem('controle_financeiro_data_v1');
+      const res = await fetch('/api/finance-data');
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.transactions)) {
+          // If server already has transactions or it's not initial, adopt server state
+          if (data.transactions.length > 0 || !isInitial) {
+            setTransactions(data.transactions);
+          } else if (isInitial) {
+            // First time migration: check if user had local offline data
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+              try {
+                const parsed: StoredData = JSON.parse(saved);
+                if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
+                  setTransactions(parsed.transactions);
+                  // Upload to server so all users share it
+                  fetch('/api/sync', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      transactions: parsed.transactions,
+                      budgets: parsed.budgets || [],
+                      goals: parsed.goals || [],
+                      accounts: parsed.accounts || DEFAULT_ACCOUNTS,
+                      categories: parsed.categories || DEFAULT_CATEGORIES,
+                    }),
+                  }).catch(console.warn);
+                }
+              } catch (e) {
+                console.error(e);
+              }
+            }
+          }
+        }
+        if (Array.isArray(data.budgets)) setBudgets(data.budgets);
+        if (Array.isArray(data.goals)) setGoals(data.goals);
+        if (Array.isArray(data.accounts) && data.accounts.length > 0) setAccounts(data.accounts);
+        if (Array.isArray(data.categories) && data.categories.length > 0) setCategories(data.categories);
+      }
+    } catch (err) {
+      console.warn('[Realtime Sync] Servidor indisponível, usando cache local:', err);
+    } finally {
+      setIsLoaded(true);
+    }
+  }, []);
+
+  // Initialize data and real-time WebSocket connection
+  useEffect(() => {
+    // 1. Initial local cache check for zero-latency paint
+    try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: StoredData = JSON.parse(saved);
-        if (Array.isArray(parsed.transactions)) {
-          setTransactions(parsed.transactions);
-          initialTransactions = parsed.transactions;
-        }
+        if (Array.isArray(parsed.transactions)) setTransactions(parsed.transactions);
         if (Array.isArray(parsed.categories) && parsed.categories.length > 0) setCategories(parsed.categories);
         if (Array.isArray(parsed.budgets)) setBudgets(parsed.budgets);
         if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
         if (Array.isArray(parsed.accounts)) setAccounts(parsed.accounts);
-      } else {
-        setTransactions(DEFAULT_TRANSACTIONS);
-        setCategories(DEFAULT_CATEGORIES);
-        setBudgets(DEFAULT_BUDGETS);
-        setGoals(DEFAULT_GOALS);
-        setAccounts(DEFAULT_ACCOUNTS);
       }
     } catch (e) {
       console.error('Failed to load local finance data', e);
-      setTransactions(DEFAULT_TRANSACTIONS);
-    } finally {
-      setIsLoaded(true);
     }
 
-    // Check Supabase connection and tables asynchronously
-    const initSupabase = async () => {
+    // 2. Fetch authoritative server data
+    fetchServerData(true);
+
+    // 3. Connect to WebSocket for instant real-time broadcasts
+    let ws: WebSocket | null = null;
+    let pingInterval: any = null;
+    let reconnectTimeout: any = null;
+    let isCleanedUp = false;
+
+    const connectWebSocket = () => {
+      if (isCleanedUp) return;
       try {
-        const check = await checkSupabaseTables();
-        if (!check.available) {
-          setSupabaseSync({
-            status: 'offline',
-            message: check.error || 'Não foi possível conectar ao Supabase.',
-          });
-          return;
-        }
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        ws = new WebSocket(wsUrl);
 
-        if (check.needsSetup) {
-          setSupabaseSync({
-            status: 'needs_setup',
-            message: 'Conectado ao Supabase. Crie as tabelas com o script SQL para persistência na nuvem.',
-            tablesFound: check.tables,
-          });
-          return;
-        }
+        ws.onopen = () => {
+          setLiveStatus('connected');
+          clearInterval(pingInterval);
+          pingInterval = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'PING' }));
+            }
+          }, 20000);
+        };
 
-        setSupabaseSync({
-          status: 'connected',
-          message: 'Conectado e sincronizado com o Supabase.',
-          lastSyncedAt: new Date().toISOString(),
-          tablesFound: check.tables,
-        });
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'INIT_DATA' && msg.data) {
+              if (Array.isArray(msg.data.transactions)) {
+                setTransactions(msg.data.transactions);
+              }
+              if (Array.isArray(msg.data.budgets)) setBudgets(msg.data.budgets);
+              if (Array.isArray(msg.data.goals)) setGoals(msg.data.goals);
+              if (Array.isArray(msg.data.accounts) && msg.data.accounts.length > 0) setAccounts(msg.data.accounts);
+              if (Array.isArray(msg.data.categories) && msg.data.categories.length > 0) setCategories(msg.data.categories);
+            } else if (msg.type === 'TRANSACTION_CREATED' && msg.data) {
+              const newTx = msg.data;
+              setTransactions((prev) => {
+                // Prevent duplicate if already added optimistically
+                if (prev.some((t) => t.id === newTx.id)) return prev;
+                return [newTx, ...prev];
+              });
+            } else if (msg.type === 'TRANSACTION_UPDATED' && msg.data) {
+              const updated = msg.data;
+              setTransactions((prev) =>
+                prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t))
+              );
+            } else if (msg.type === 'TRANSACTION_DELETED' && msg.data) {
+              const { id } = msg.data;
+              setTransactions((prev) => prev.filter((t) => t.id !== id));
+            } else if (msg.type === 'BUDGET_SAVED' && msg.data) {
+              const b = msg.data;
+              setBudgets((prev) => {
+                const idx = prev.findIndex((item) => item.id === b.id || item.categoryId === b.categoryId);
+                if (idx >= 0) {
+                  const copy = [...prev];
+                  copy[idx] = b;
+                  return copy;
+                }
+                return [...prev, b];
+              });
+            } else if (msg.type === 'BUDGET_DELETED' && msg.data) {
+              setBudgets((prev) => prev.filter((item) => item.id !== msg.data.id));
+            } else if (msg.type === 'GOAL_SAVED' && msg.data) {
+              const g = msg.data;
+              setGoals((prev) => {
+                const idx = prev.findIndex((item) => item.id === g.id);
+                if (idx >= 0) {
+                  const copy = [...prev];
+                  copy[idx] = g;
+                  return copy;
+                }
+                return [...prev, g];
+              });
+            } else if (msg.type === 'GOAL_DELETED' && msg.data) {
+              setGoals((prev) => prev.filter((item) => item.id !== msg.data.id));
+            } else if (msg.type === 'FULL_SYNC' && msg.data) {
+              if (Array.isArray(msg.data.transactions)) setTransactions(msg.data.transactions);
+              if (Array.isArray(msg.data.budgets)) setBudgets(msg.data.budgets);
+              if (Array.isArray(msg.data.goals)) setGoals(msg.data.goals);
+            }
+          } catch (e) {
+            console.warn('[Realtime] Erro ao interpretar payload:', e);
+          }
+        };
 
-        // Load remote transactions if present
-        const remoteTx = await fetchSupabaseTransactions();
-        if (remoteTx && remoteTx.length > 0) {
-          setTransactions(remoteTx);
+        ws.onclose = () => {
+          clearInterval(pingInterval);
+          if (!isCleanedUp) {
+            setLiveStatus('connecting');
+            reconnectTimeout = setTimeout(connectWebSocket, 2000);
+          }
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch {
+        if (!isCleanedUp) {
+          reconnectTimeout = setTimeout(connectWebSocket, 3000);
         }
-      } catch (err: any) {
-        setSupabaseSync({
-          status: 'offline',
-          message: err?.message || 'Falha de comunicação com o Supabase.',
-        });
       }
     };
 
-    initSupabase();
-  }, []);
+    connectWebSocket();
+
+    // 4. Background refresh when tab gains focus or every 8s
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchServerData();
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', handleVisibility);
+
+    const pollTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        fetchServerData();
+      }
+    }, 8000);
+
+    return () => {
+      isCleanedUp = true;
+      clearInterval(pingInterval);
+      clearInterval(pollTimer);
+      clearTimeout(reconnectTimeout);
+      window.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', handleVisibility);
+      if (ws) ws.close();
+    };
+  }, [fetchServerData]);
 
   // Save changes to localStorage as fallback and local offline cache
   useEffect(() => {
@@ -222,13 +349,16 @@ export function useFinanceData() {
   const availableMonths = useMemo(() => {
     const monthsSet = new Set<string>();
     monthsSet.add(getCurrentYearMonth());
+    if (filters.month && filters.month !== 'all') {
+      monthsSet.add(filters.month);
+    }
     transactions.forEach((tx) => {
       if (tx.date) {
         monthsSet.add(tx.date.substring(0, 7));
       }
     });
     return Array.from(monthsSet).sort().reverse();
-  }, [transactions]);
+  }, [transactions, filters.month]);
 
   // Map of categories by ID for instant lookup
   const categoryMap = useMemo(() => {
@@ -410,18 +540,30 @@ export function useFinanceData() {
     });
   }, [budgets, categoryMap, currentMonthTransactions]);
 
-  // Action methods - saves locally and syncs with Supabase
+  // Action methods - saves locally, persists to central server and broadcasts to all users in realtime
   const addTransaction = (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
     const newTx: Transaction = {
       ...txData,
       id: `tx_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
       createdAt: new Date().toISOString(),
     };
+    // 1. Optimistic instant local update
     setTransactions((prev) => [newTx, ...prev]);
-    // Asynchronous background persistence to Supabase
+
+    // 2. Persist to central server & broadcast to all connected users
+    fetch('/api/transactions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newTx),
+    }).catch((err) => {
+      console.warn('[Sync] Erro ao sincronizar nova transação no servidor:', err);
+    });
+
+    // 3. Asynchronous background persistence to Supabase (if available)
     upsertSupabaseTransaction(newTx).catch((err) => {
       console.warn('[Supabase] Erro ao sincronizar nova transação:', err);
     });
+
     return newTx;
   };
 
@@ -430,6 +572,16 @@ export function useFinanceData() {
       const updatedList = prev.map((t) => (t.id === id ? { ...t, ...txData } : t));
       const target = updatedList.find((t) => t.id === id);
       if (target) {
+        // Send to central server
+        fetch(`/api/transactions/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target),
+        }).catch((err) => {
+          console.warn('[Sync] Erro ao atualizar transação no servidor:', err);
+        });
+
+        // Supabase sync
         upsertSupabaseTransaction(target).catch((err) => {
           console.warn('[Supabase] Erro ao atualizar transação:', err);
         });
@@ -440,6 +592,15 @@ export function useFinanceData() {
 
   const deleteTransaction = (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+
+    // Send to central server
+    fetch(`/api/transactions/${id}`, {
+      method: 'DELETE',
+    }).catch((err) => {
+      console.warn('[Sync] Erro ao deletar transação no servidor:', err);
+    });
+
+    // Supabase sync
     deleteSupabaseTransaction(id).catch((err) => {
       console.warn('[Supabase] Erro ao deletar transação:', err);
     });
@@ -447,17 +608,25 @@ export function useFinanceData() {
 
   const toggleTransactionStatus = (id: string) => {
     setTransactions((prev) => {
+      let target: Transaction | undefined;
       const updatedList = prev.map((t) => {
         if (t.id === id) {
-          return {
+          target = {
             ...t,
             status: (t.status === 'completed' ? 'pending' : 'completed') as 'completed' | 'pending',
           };
+          return target;
         }
         return t;
       });
-      const target = updatedList.find((t) => t.id === id);
+
       if (target) {
+        fetch(`/api/transactions/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target),
+        }).catch(console.warn);
+
         upsertSupabaseTransaction(target).catch(console.warn);
       }
       return updatedList;
@@ -470,6 +639,13 @@ export function useFinanceData() {
       id: `b_${Date.now()}`,
     };
     setBudgets((prev) => [...prev, newBudget]);
+
+    fetch('/api/budgets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newBudget),
+    }).catch(console.warn);
+
     upsertSupabaseBudget(newBudget).catch(console.warn);
   };
 
@@ -477,13 +653,21 @@ export function useFinanceData() {
     setBudgets((prev) => {
       const updatedList = prev.map((b) => (b.id === id ? { ...b, ...budgetData } : b));
       const target = updatedList.find((b) => b.id === id);
-      if (target) upsertSupabaseBudget(target).catch(console.warn);
+      if (target) {
+        fetch('/api/budgets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target),
+        }).catch(console.warn);
+        upsertSupabaseBudget(target).catch(console.warn);
+      }
       return updatedList;
     });
   };
 
   const deleteBudget = (id: string) => {
     setBudgets((prev) => prev.filter((b) => b.id !== id));
+    fetch(`/api/budgets/${id}`, { method: 'DELETE' }).catch(console.warn);
     deleteSupabaseBudget(id).catch(console.warn);
   };
 
@@ -493,6 +677,13 @@ export function useFinanceData() {
       id: `g_${Date.now()}`,
     };
     setGoals((prev) => [...prev, newGoal]);
+
+    fetch('/api/goals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newGoal),
+    }).catch(console.warn);
+
     upsertSupabaseGoal(newGoal).catch(console.warn);
   };
 
@@ -500,33 +691,50 @@ export function useFinanceData() {
     setGoals((prev) => {
       const updatedList = prev.map((g) => (g.id === id ? { ...g, ...goalData } : g));
       const target = updatedList.find((g) => g.id === id);
-      if (target) upsertSupabaseGoal(target).catch(console.warn);
+      if (target) {
+        fetch('/api/goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target),
+        }).catch(console.warn);
+        upsertSupabaseGoal(target).catch(console.warn);
+      }
       return updatedList;
     });
   };
 
   const depositToGoal = (id: string, amount: number) => {
     setGoals((prev) => {
+      let target: FinancialGoal | undefined;
       const updatedList = prev.map((g) => {
         if (g.id === id) {
           const newAmount = Math.max(0, g.currentAmount + amount);
           const completed = newAmount >= g.targetAmount;
-          return {
+          target = {
             ...g,
             currentAmount: newAmount,
             completed,
           };
+          return target;
         }
         return g;
       });
-      const target = updatedList.find((g) => g.id === id);
-      if (target) upsertSupabaseGoal(target).catch(console.warn);
+
+      if (target) {
+        fetch('/api/goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(target),
+        }).catch(console.warn);
+        upsertSupabaseGoal(target).catch(console.warn);
+      }
       return updatedList;
     });
   };
 
   const deleteGoal = (id: string) => {
     setGoals((prev) => prev.filter((g) => g.id !== id));
+    fetch(`/api/goals/${id}`, { method: 'DELETE' }).catch(console.warn);
     deleteSupabaseGoal(id).catch(console.warn);
   };
 
@@ -592,8 +800,25 @@ export function useFinanceData() {
       if (Array.isArray(parsed.goals)) {
         setGoals(parsed.goals);
       }
-      return { success: true, message: 'Dados restaurados com sucesso!' };
-    } catch (err) {
+      if (Array.isArray(parsed.accounts)) {
+        setAccounts(parsed.accounts);
+      }
+
+      // Propagate to central server
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transactions: parsed.transactions,
+          categories: parsed.categories,
+          budgets: parsed.budgets,
+          goals: parsed.goals,
+          accounts: parsed.accounts,
+        }),
+      }).catch(console.warn);
+
+      return { success: true, message: 'Dados restaurados e sincronizados com sucesso!' };
+    } catch {
       return { success: false, message: 'Erro ao processar arquivo JSON. Verifique o formato.' };
     }
   };
@@ -606,10 +831,23 @@ export function useFinanceData() {
     setGoals(DEFAULT_GOALS);
     setAccounts(DEFAULT_ACCOUNTS);
     localStorage.removeItem(STORAGE_KEY);
+
+    fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        transactions: DEFAULT_TRANSACTIONS,
+        categories: DEFAULT_CATEGORIES,
+        budgets: DEFAULT_BUDGETS,
+        goals: DEFAULT_GOALS,
+        accounts: DEFAULT_ACCOUNTS,
+      }),
+    }).catch(console.warn);
   };
 
   return {
     isLoaded,
+    liveStatus,
     transactions,
     categories,
     budgets,

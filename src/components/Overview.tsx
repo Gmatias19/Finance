@@ -9,6 +9,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ChevronRight,
+  ChevronLeft,
   Plus,
 } from 'lucide-react';
 import {
@@ -23,7 +24,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { formatCurrency, formatDate, formatMonthYear } from '../utils/formatters';
+import { formatCurrency, formatDate, formatMonthYear, getAdjacentMonth } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 import { Transaction, Category, ActiveTab } from '../types';
 
@@ -40,6 +41,7 @@ interface OverviewProps {
   };
   allTimeBalance: number;
   selectedMonth: string;
+  onSelectMonth?: (month: string) => void;
   monthlyTrends: Array<{
     month: string;
     label: string;
@@ -74,6 +76,7 @@ export const Overview: React.FC<OverviewProps> = ({
   summary,
   allTimeBalance,
   selectedMonth,
+  onSelectMonth,
   monthlyTrends,
   categoryExpenses,
   budgetsWithProgress,
@@ -93,12 +96,40 @@ export const Overview: React.FC<OverviewProps> = ({
           <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
             Resumo Financeiro
           </h1>
-          <p className="text-sm text-slate-400 mt-0.5">
-            Exibindo indicadores para{' '}
-            <span className="font-semibold text-slate-200">
-              {formatMonthYear(selectedMonth)}
-            </span>
-          </p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <span className="text-sm text-slate-400">Exibindo indicadores para:</span>
+            {onSelectMonth ? (
+              <div className="inline-flex items-center bg-slate-800 border border-slate-700 rounded-lg p-0.5 shadow-xs">
+                <button
+                  type="button"
+                  id="overview-btn-prev-month"
+                  onClick={() => onSelectMonth(getAdjacentMonth(selectedMonth, -1))}
+                  title={`Mês anterior (${formatMonthYear(getAdjacentMonth(selectedMonth, -1))})`}
+                  aria-label="Mês anterior"
+                  className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors cursor-pointer"
+                >
+                  <ChevronLeft size={15} />
+                </button>
+                <span className="px-2 text-xs sm:text-sm font-semibold text-sky-400">
+                  {formatMonthYear(selectedMonth)}
+                </span>
+                <button
+                  type="button"
+                  id="overview-btn-next-month"
+                  onClick={() => onSelectMonth(getAdjacentMonth(selectedMonth, 1))}
+                  title={`Próximo mês (${formatMonthYear(getAdjacentMonth(selectedMonth, 1))})`}
+                  aria-label="Próximo mês"
+                  className="p-1 text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors cursor-pointer"
+                >
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            ) : (
+              <span className="font-semibold text-slate-200 text-sm">
+                {formatMonthYear(selectedMonth)}
+              </span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button

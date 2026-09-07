@@ -102,6 +102,7 @@ export default function App() {
             summary={summary}
             allTimeBalance={allTimeBalance}
             selectedMonth={filters.month}
+            onSelectMonth={handleSelectedMonthChange}
             monthlyTrends={monthlyTrends}
             categoryExpenses={categoryExpenses}
             budgetsWithProgress={budgetsWithProgress}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Wallet,
   LayoutDashboard,
@@ -7,9 +7,11 @@ import {
   Target,
   BarChart3,
   Calendar,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
-import { formatMonthYear } from '../utils/formatters';
+import { formatMonthYear, getAdjacentMonth } from '../utils/formatters';
 import { SupabaseSyncState } from '../services/supabaseService';
 
 interface NavbarProps {
@@ -39,6 +41,26 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'reports', label: 'Relatórios', icon: <BarChart3 size={18} /> },
   ];
 
+  const handlePrevMonth = () => {
+    setSelectedMonth(getAdjacentMonth(selectedMonth, -1));
+  };
+
+  const handleNextMonth = () => {
+    setSelectedMonth(getAdjacentMonth(selectedMonth, 1));
+  };
+
+  // Guarantee the active selected month is present in the select options
+  const allRenderedMonths = useMemo(() => {
+    const set = new Set(availableMonths);
+    if (selectedMonth && selectedMonth !== 'all') {
+      set.add(selectedMonth);
+    }
+    return Array.from(set).sort().reverse();
+  }, [availableMonths, selectedMonth]);
+
+  const prevMonthLabel = formatMonthYear(getAdjacentMonth(selectedMonth, -1));
+  const nextMonthLabel = formatMonthYear(getAdjacentMonth(selectedMonth, 1));
+
   return (
     <>
       {/* Top Header */}
@@ -62,25 +84,54 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Quick Actions & Selectors */}
             <div className="flex items-center gap-1.5 sm:gap-2.5">
-              {/* Month Selector */}
-              <div className="relative flex items-center">
-                <div className="absolute left-2.5 pointer-events-none text-slate-400">
-                  <Calendar size={14} />
-                </div>
-                <select
-                  id="month-selector"
-                  value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="pl-7 pr-6 sm:pl-8 sm:pr-7 py-1.5 text-xs sm:text-sm font-medium bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-lg text-slate-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
-                  aria-label="Selecionar mês de referência"
+              {/* Month Selector with Left and Right Arrows */}
+              <div className="flex items-center bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-xl p-0.5 shadow-xs transition-colors">
+                {/* Seta Esquerda: Mês Anterior */}
+                <button
+                  type="button"
+                  id="btn-prev-month"
+                  onClick={handlePrevMonth}
+                  title={`Mês anterior (${prevMonthLabel})`}
+                  aria-label={`Mês anterior (${prevMonthLabel})`}
+                  className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-700/80 active:bg-slate-600 rounded-lg transition-colors cursor-pointer"
                 >
-                  <option value="all">Todo o Histórico</option>
-                  {availableMonths.map((m) => (
-                    <option key={m} value={m} className="bg-slate-900 text-slate-200">
-                      {formatMonthYear(m)}
+                  <ChevronLeft size={16} />
+                </button>
+
+                {/* Seletor Central do Mês */}
+                <div className="relative flex items-center">
+                  <div className="absolute left-2 pointer-events-none text-sky-400">
+                    <Calendar size={13} />
+                  </div>
+                  <select
+                    id="month-selector"
+                    value={selectedMonth}
+                    onChange={(e) => setSelectedMonth(e.target.value)}
+                    className="pl-6.5 pr-2 sm:pl-7 sm:pr-3 py-1 sm:py-1.5 text-xs sm:text-sm font-semibold bg-transparent text-slate-200 cursor-pointer focus:outline-none border-none hover:text-white transition-colors text-center"
+                    aria-label="Selecionar mês de referência"
+                  >
+                    <option value="all" className="bg-slate-900 text-slate-200">
+                      Todo o Histórico
                     </option>
-                  ))}
-                </select>
+                    {allRenderedMonths.map((m) => (
+                      <option key={m} value={m} className="bg-slate-900 text-slate-200">
+                        {formatMonthYear(m)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Seta Direita: Próximo Mês */}
+                <button
+                  type="button"
+                  id="btn-next-month"
+                  onClick={handleNextMonth}
+                  title={`Próximo mês (${nextMonthLabel})`}
+                  aria-label={`Próximo mês (${nextMonthLabel})`}
+                  className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-700/80 active:bg-slate-600 rounded-lg transition-colors cursor-pointer"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
             </div>
           </div>

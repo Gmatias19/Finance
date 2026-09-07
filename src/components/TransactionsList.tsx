@@ -122,11 +122,17 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
       {/* Header & Main Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-            Lançamentos Financeiros
-          </h1>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+              Lançamentos Financeiros
+            </h1>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Sincronização em Tempo Real
+            </span>
+          </div>
           <p className="text-sm text-slate-400 mt-0.5">
-            Organize, filtre e controle o status das suas entradas e saídas
+            Qualquer lançamento ou alteração reflete imediatamente para todos os usuários conectados
           </p>
         </div>
         <div className="flex items-center gap-2">
