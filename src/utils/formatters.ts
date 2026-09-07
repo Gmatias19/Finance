@@ -47,12 +47,14 @@ export const formatMonthYear = (yearMonthString: string): string => {
 
 // Format short month (e.g. "Set/26")
 export const formatShortMonth = (yearMonthString: string): string => {
-  if (!yearMonthString) return '';
+  if (!yearMonthString || yearMonthString === 'all') return 'Todos';
   const [year, month] = yearMonthString.split('-').map(Number);
   if (!year || !month) return yearMonthString;
   const date = new Date(year, month - 1, 1);
-  const monthName = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date);
-  return `${monthName.replace('.', '')}/${year.toString().slice(-2)}`;
+  const rawMonth = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date);
+  const cleanMonth = rawMonth.replace('.', '').trim();
+  const capitalized = cleanMonth.charAt(0).toUpperCase() + cleanMonth.slice(1);
+  return `${capitalized}/${year.toString().slice(-2)}`;
 };
 
 // Get today as YYYY-MM-DD

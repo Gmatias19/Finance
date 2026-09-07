@@ -11,7 +11,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
-import { formatMonthYear, getAdjacentMonth } from '../utils/formatters';
+import { formatMonthYear, formatShortMonth, getAdjacentMonth } from '../utils/formatters';
 import { SupabaseSyncState } from '../services/supabaseService';
 
 interface NavbarProps {
@@ -58,8 +58,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     return Array.from(set).sort().reverse();
   }, [availableMonths, selectedMonth]);
 
-  const prevMonthLabel = formatMonthYear(getAdjacentMonth(selectedMonth, -1));
-  const nextMonthLabel = formatMonthYear(getAdjacentMonth(selectedMonth, 1));
+  const prevMonthLabel = formatShortMonth(getAdjacentMonth(selectedMonth, -1));
+  const nextMonthLabel = formatShortMonth(getAdjacentMonth(selectedMonth, 1));
 
   return (
     <>
@@ -72,12 +72,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-600 flex items-center justify-center text-white shadow-md shadow-sky-950/50">
                 <Wallet className="w-5 h-5" />
               </div>
-              <div>
-                <span className="font-bold text-sm sm:text-lg tracking-tight text-white block leading-tight">
-                  Controle Financeiro
-                </span>
-                <span className="text-[10px] sm:text-xs text-slate-400 font-medium hidden xs:block">
-                  Gestão Pessoal Inteligente
+              <div className="flex items-center">
+                <span className="font-bold text-base sm:text-xl tracking-tight text-white block leading-tight">
+                  Finance
                 </span>
               </div>
             </div>
@@ -111,11 +108,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     aria-label="Selecionar mês de referência"
                   >
                     <option value="all" className="bg-slate-900 text-slate-200">
-                      Todo o Histórico
+                      Todos
                     </option>
                     {allRenderedMonths.map((m) => (
                       <option key={m} value={m} className="bg-slate-900 text-slate-200">
-                        {formatMonthYear(m)}
+                        {formatShortMonth(m)}
                       </option>
                     ))}
                   </select>

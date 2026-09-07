@@ -1,5 +1,5 @@
 {
-  "name": "Controle Financeiro",
+  "name": "Finance",
   "description": "Aplicativo completo de controle financeiro pessoal com gestão de receitas e despesas, orçamentos mensais, metas de economia, gráficos interativos e exportação de dados.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

@@ -74,7 +74,7 @@ export default function App() {
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3 text-slate-400">
           <div className="w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium">Carregando Controle Financeiro...</span>
+          <span className="text-sm font-medium">Carregando Finance...</span>
         </div>
       </div>
     );
