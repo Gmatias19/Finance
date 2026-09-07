@@ -1,9 +1,4 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useFinanceData } from './hooks/useFinanceData';
 import { ActiveTab, Transaction } from './types';
 import { Navbar } from './components/Navbar';
@@ -14,6 +9,7 @@ import { GoalsView } from './components/GoalsView';
 import { ReportsView } from './components/ReportsView';
 import { TransactionModal } from './components/TransactionModal';
 import { ExportImportModal } from './components/ExportImportModal';
+import { SupabaseSyncModal } from './components/SupabaseSyncModal';
 
 export default function App() {
   const {
@@ -33,6 +29,9 @@ export default function App() {
     categoryExpenses,
     monthlyTrends,
     budgetsWithProgress,
+    supabaseSync,
+    refreshSupabaseCheck,
+    syncAllToSupabaseAction,
     addTransaction,
     updateTransaction,
     deleteTransaction,
@@ -54,6 +53,7 @@ export default function App() {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isExportImportModalOpen, setIsExportImportModalOpen] = useState(false);
+  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
 
   const handleOpenNewTransaction = () => {
     setEditingTransaction(null);
@@ -73,7 +73,7 @@ export default function App() {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
         <div className="flex flex-col items-center gap-3 text-slate-400">
-          <div className="w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full animate-spin" />
           <span className="text-sm font-medium">Carregando Controle Financeiro...</span>
         </div>
       </div>
@@ -91,6 +91,8 @@ export default function App() {
         availableMonths={availableMonths}
         onOpenNewTransaction={handleOpenNewTransaction}
         onOpenExportImport={() => setIsExportImportModalOpen(true)}
+        supabaseSync={supabaseSync}
+        onOpenSupabaseSync={() => setIsSupabaseModalOpen(true)}
       />
 
       {/* Main View Area */}
@@ -175,6 +177,15 @@ export default function App() {
         onExportJSON={exportToJSON}
         onImportJSON={importFromJSON}
         onResetToDefaults={resetToDefaults}
+        transactionCount={transactions.length}
+      />
+
+      <SupabaseSyncModal
+        isOpen={isSupabaseModalOpen}
+        onClose={() => setIsSupabaseModalOpen(false)}
+        syncState={supabaseSync}
+        onRefreshCheck={refreshSupabaseCheck}
+        onSyncAllToSupabase={syncAllToSupabaseAction}
         transactionCount={transactions.length}
       />
     </div>

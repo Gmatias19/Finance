@@ -104,7 +104,7 @@ export const Overview: React.FC<OverviewProps> = ({
           <button
             id="btn-quick-new-tx"
             onClick={onOpenNewTransaction}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-sm font-semibold rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer shadow-sky-950/40"
           >
             <Plus size={16} />
             <span>Registrar Lançamento</span>
@@ -127,7 +127,7 @@ export const Overview: React.FC<OverviewProps> = ({
           <div className="mt-3">
             <span
               className={`text-2xl font-bold tracking-tight ${
-                summary.netBalance >= 0 ? 'text-white' : 'text-rose-400'
+                summary.netBalance >= 0 ? 'text-sky-400' : 'text-rose-400'
               }`}
             >
               {formatCurrency(summary.netBalance)}
@@ -139,18 +139,18 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        {/* Card 2: Receitas */}
+        {/* Card 2: Receitas (Azul Baleia) */}
         <div id="card-receitas" className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
               Receitas Realizadas
             </span>
-            <div className="w-9 h-9 rounded-xl bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-sky-950/60 text-sky-400 border border-sky-800/40 flex items-center justify-center">
               <TrendingUp size={18} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-emerald-400 tracking-tight">
+            <span className="text-2xl font-bold text-sky-400 tracking-tight">
               {formatCurrency(summary.income)}
             </span>
           </div>
@@ -161,7 +161,7 @@ export const Overview: React.FC<OverviewProps> = ({
                 {formatCurrency(summary.pendingIncome)} a receber
               </span>
             ) : (
-              <span className="text-emerald-400/90 font-medium">Todas recebidas</span>
+              <span className="text-sky-400/90 font-medium">Todas recebidas</span>
             )}
           </div>
         </div>
@@ -210,7 +210,7 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
           <div className="mt-2 text-xs text-slate-400">
             {summary.savingsRate >= 20 ? (
-              <span className="text-emerald-400 font-medium">Meta de 20%+ alcançada</span>
+              <span className="text-sky-400 font-medium">Meta de 20%+ alcançada</span>
             ) : (
               <span className="text-slate-400">Recomendado poupar 20%</span>
             )}
@@ -286,7 +286,7 @@ export const Overview: React.FC<OverviewProps> = ({
                     }}
                   />
                   <Legend wrapperStyle={{ paddingTop: '10px', fontSize: '12px' }} />
-                  <Bar dataKey="Receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="Receitas" fill="#0ea5e9" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="Despesas" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -388,7 +388,7 @@ export const Overview: React.FC<OverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('budgets')}
-              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer"
             >
               Ver todos <ChevronRight size={14} />
             </button>
@@ -402,7 +402,7 @@ export const Overview: React.FC<OverviewProps> = ({
                 ? 'bg-rose-500'
                 : isWarning
                 ? 'bg-amber-500'
-                : 'bg-emerald-500';
+                : 'bg-sky-500';
 
               return (
                 <div key={b.id} className="space-y-1.5">
@@ -445,7 +445,7 @@ export const Overview: React.FC<OverviewProps> = ({
             </div>
             <button
               onClick={() => onNavigateTab('transactions')}
-              className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 flex items-center gap-1 cursor-pointer"
+              className="text-xs font-semibold text-sky-400 hover:text-sky-300 flex items-center gap-1 cursor-pointer"
             >
               Ver histórico completo <ChevronRight size={14} />
             </button>
@@ -492,11 +492,11 @@ export const Overview: React.FC<OverviewProps> = ({
                     <div className="text-right shrink-0">
                       <div
                         className={`text-sm font-bold flex items-center justify-end gap-0.5 ${
-                          isIncome ? 'text-emerald-400' : 'text-slate-100'
+                          isIncome ? 'text-sky-400' : 'text-slate-100'
                         }`}
                       >
                         {isIncome ? (
-                          <ArrowUpRight size={14} className="text-emerald-400" />
+                          <ArrowUpRight size={14} className="text-sky-400" />
                         ) : (
                           <ArrowDownRight size={14} className="text-rose-400" />
                         )}
@@ -512,8 +512,15 @@ export const Overview: React.FC<OverviewProps> = ({
                 );
               })
             ) : (
-              <div className="py-8 text-center text-sm text-slate-500">
-                Nenhuma transação encontrada no período.
+              <div className="py-8 text-center space-y-3">
+                <p className="text-sm text-slate-400">Nenhum lançamento adicionado ainda.</p>
+                <button
+                  onClick={onOpenNewTransaction}
+                  className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-sky-950/40"
+                >
+                  <Plus size={14} />
+                  <span>Adicionar Primeiro Lançamento</span>
+                </button>
               </div>
             )}
           </div>

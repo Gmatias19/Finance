@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Transaction,
   Category,
@@ -15,8 +15,20 @@ import {
   DEFAULT_ACCOUNTS,
 } from '../data/defaultData';
 import { getCurrentYearMonth, formatCurrency, formatDate } from '../utils/formatters';
+import {
+  checkSupabaseTables,
+  fetchSupabaseTransactions,
+  upsertSupabaseTransaction,
+  deleteSupabaseTransaction,
+  upsertSupabaseBudget,
+  deleteSupabaseBudget,
+  upsertSupabaseGoal,
+  deleteSupabaseGoal,
+  syncAllDataToSupabase,
+  SupabaseSyncState,
+} from '../services/supabaseService';
 
-const STORAGE_KEY = 'controle_financeiro_data_v2';
+const STORAGE_KEY = 'controle_financeiro_data_v4';
 
 interface StoredData {
   transactions: Transaction[];
@@ -34,6 +46,12 @@ export function useFinanceData() {
   const [goals, setGoals] = useState<FinancialGoal[]>(DEFAULT_GOALS);
   const [accounts, setAccounts] = useState<FinancialAccount[]>(DEFAULT_ACCOUNTS);
 
+  // Supabase sync state
+  const [supabaseSync, setSupabaseSync] = useState<SupabaseSyncState>({
+    status: 'checking',
+    message: 'Verificando conexão com o Supabase...',
+  });
+
   // Filter state
   const [filters, setFilters] = useState<FilterOptions>({
     search: '',
@@ -45,19 +63,24 @@ export function useFinanceData() {
     sortBy: 'date-desc',
   });
 
-  // Load from localStorage on mount
+  // Initialize data from local cache and check Supabase
   useEffect(() => {
+    let initialTransactions = DEFAULT_TRANSACTIONS;
     try {
+      localStorage.removeItem('controle_financeiro_data_v2');
+      localStorage.removeItem('controle_financeiro_data_v1');
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: StoredData = JSON.parse(saved);
-        if (Array.isArray(parsed.transactions)) setTransactions(parsed.transactions);
+        if (Array.isArray(parsed.transactions)) {
+          setTransactions(parsed.transactions);
+          initialTransactions = parsed.transactions;
+        }
         if (Array.isArray(parsed.categories) && parsed.categories.length > 0) setCategories(parsed.categories);
         if (Array.isArray(parsed.budgets)) setBudgets(parsed.budgets);
         if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
         if (Array.isArray(parsed.accounts)) setAccounts(parsed.accounts);
       } else {
-        // Initial setup with realistic defaults
         setTransactions(DEFAULT_TRANSACTIONS);
         setCategories(DEFAULT_CATEGORIES);
         setBudgets(DEFAULT_BUDGETS);
@@ -67,16 +90,55 @@ export function useFinanceData() {
     } catch (e) {
       console.error('Failed to load local finance data', e);
       setTransactions(DEFAULT_TRANSACTIONS);
-      setCategories(DEFAULT_CATEGORIES);
-      setBudgets(DEFAULT_BUDGETS);
-      setGoals(DEFAULT_GOALS);
-      setAccounts(DEFAULT_ACCOUNTS);
     } finally {
       setIsLoaded(true);
     }
+
+    // Check Supabase connection and tables asynchronously
+    const initSupabase = async () => {
+      try {
+        const check = await checkSupabaseTables();
+        if (!check.available) {
+          setSupabaseSync({
+            status: 'offline',
+            message: check.error || 'Não foi possível conectar ao Supabase.',
+          });
+          return;
+        }
+
+        if (check.needsSetup) {
+          setSupabaseSync({
+            status: 'needs_setup',
+            message: 'Conectado ao Supabase. Crie as tabelas com o script SQL para persistência na nuvem.',
+            tablesFound: check.tables,
+          });
+          return;
+        }
+
+        setSupabaseSync({
+          status: 'connected',
+          message: 'Conectado e sincronizado com o Supabase.',
+          lastSyncedAt: new Date().toISOString(),
+          tablesFound: check.tables,
+        });
+
+        // Load remote transactions if present
+        const remoteTx = await fetchSupabaseTransactions();
+        if (remoteTx && remoteTx.length > 0) {
+          setTransactions(remoteTx);
+        }
+      } catch (err: any) {
+        setSupabaseSync({
+          status: 'offline',
+          message: err?.message || 'Falha de comunicação com o Supabase.',
+        });
+      }
+    };
+
+    initSupabase();
   }, []);
 
-  // Save changes to localStorage
+  // Save changes to localStorage as fallback and local offline cache
   useEffect(() => {
     if (!isLoaded) return;
     try {
@@ -92,6 +154,69 @@ export function useFinanceData() {
       console.error('Failed to save to localStorage', e);
     }
   }, [transactions, categories, budgets, goals, accounts, isLoaded]);
+
+  // Re-check Supabase tables and connection
+  const refreshSupabaseCheck = useCallback(async () => {
+    setSupabaseSync((prev) => ({ ...prev, status: 'checking', message: 'Consultando Supabase...' }));
+    const check = await checkSupabaseTables();
+    if (!check.available) {
+      setSupabaseSync({
+        status: 'offline',
+        message: check.error || 'Falha de conexão com o Supabase.',
+      });
+      return;
+    }
+    if (check.needsSetup) {
+      setSupabaseSync({
+        status: 'needs_setup',
+        message: 'Conectado. Crie as tabelas com o script SQL.',
+        tablesFound: check.tables,
+      });
+      return;
+    }
+    setSupabaseSync({
+      status: 'connected',
+      message: 'Conectado e sincronizado com o Supabase.',
+      lastSyncedAt: new Date().toISOString(),
+      tablesFound: check.tables,
+    });
+    const remoteTx = await fetchSupabaseTransactions();
+    if (remoteTx && remoteTx.length > 0) {
+      setTransactions(remoteTx);
+    }
+  }, []);
+
+  // Batch sync all local data to Supabase
+  const syncAllToSupabaseAction = useCallback(async () => {
+    setSupabaseSync((prev) => ({
+      ...prev,
+      status: 'syncing',
+      message: 'Enviando todos os dados para o Supabase...',
+    }));
+
+    const result = await syncAllDataToSupabase({
+      transactions,
+      budgets,
+      goals,
+      accounts,
+    });
+
+    if (result.success) {
+      setSupabaseSync((prev) => ({
+        ...prev,
+        status: 'connected',
+        message: 'Dados sincronizados com sucesso no Supabase!',
+        lastSyncedAt: new Date().toISOString(),
+      }));
+    } else {
+      setSupabaseSync((prev) => ({
+        ...prev,
+        status: prev.tablesFound?.transactions ? 'connected' : 'needs_setup',
+        message: result.message,
+      }));
+    }
+    return result;
+  }, [transactions, budgets, goals, accounts]);
 
   // Unique list of available months in transactions
   const availableMonths = useMemo(() => {
@@ -236,7 +361,7 @@ export function useFinanceData() {
       .sort((a, b) => b.amount - a.amount);
   }, [currentMonthTransactions, categoryMap, summary.expense]);
 
-  // Monthly flow data for 6 recent months (for bar/area charts)
+  // Monthly flow data for 6 recent months
   const monthlyTrends = useMemo(() => {
     const months: string[] = Array.from(
       new Set<string>(transactions.map((t) => t.date.substring(0, 7)))
@@ -267,7 +392,6 @@ export function useFinanceData() {
   const budgetsWithProgress = useMemo(() => {
     return budgets.map((b) => {
       const cat = categoryMap.get(b.categoryId);
-      // Spent in this category for the selected month
       const spent = currentMonthTransactions
         .filter((t) => t.categoryId === b.categoryId && t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
@@ -286,7 +410,7 @@ export function useFinanceData() {
     });
   }, [budgets, categoryMap, currentMonthTransactions]);
 
-  // Action methods
+  // Action methods - saves locally and syncs with Supabase
   const addTransaction = (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
     const newTx: Transaction = {
       ...txData,
@@ -294,31 +418,50 @@ export function useFinanceData() {
       createdAt: new Date().toISOString(),
     };
     setTransactions((prev) => [newTx, ...prev]);
+    // Asynchronous background persistence to Supabase
+    upsertSupabaseTransaction(newTx).catch((err) => {
+      console.warn('[Supabase] Erro ao sincronizar nova transação:', err);
+    });
     return newTx;
   };
 
   const updateTransaction = (id: string, txData: Partial<Transaction>) => {
-    setTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...txData } : t))
-    );
+    setTransactions((prev) => {
+      const updatedList = prev.map((t) => (t.id === id ? { ...t, ...txData } : t));
+      const target = updatedList.find((t) => t.id === id);
+      if (target) {
+        upsertSupabaseTransaction(target).catch((err) => {
+          console.warn('[Supabase] Erro ao atualizar transação:', err);
+        });
+      }
+      return updatedList;
+    });
   };
 
   const deleteTransaction = (id: string) => {
     setTransactions((prev) => prev.filter((t) => t.id !== id));
+    deleteSupabaseTransaction(id).catch((err) => {
+      console.warn('[Supabase] Erro ao deletar transação:', err);
+    });
   };
 
   const toggleTransactionStatus = (id: string) => {
-    setTransactions((prev) =>
-      prev.map((t) => {
+    setTransactions((prev) => {
+      const updatedList = prev.map((t) => {
         if (t.id === id) {
           return {
             ...t,
-            status: t.status === 'completed' ? 'pending' : 'completed',
+            status: (t.status === 'completed' ? 'pending' : 'completed') as 'completed' | 'pending',
           };
         }
         return t;
-      })
-    );
+      });
+      const target = updatedList.find((t) => t.id === id);
+      if (target) {
+        upsertSupabaseTransaction(target).catch(console.warn);
+      }
+      return updatedList;
+    });
   };
 
   const addBudget = (budgetData: Omit<Budget, 'id'>) => {
@@ -327,16 +470,21 @@ export function useFinanceData() {
       id: `b_${Date.now()}`,
     };
     setBudgets((prev) => [...prev, newBudget]);
+    upsertSupabaseBudget(newBudget).catch(console.warn);
   };
 
   const updateBudget = (id: string, budgetData: Partial<Budget>) => {
-    setBudgets((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, ...budgetData } : b))
-    );
+    setBudgets((prev) => {
+      const updatedList = prev.map((b) => (b.id === id ? { ...b, ...budgetData } : b));
+      const target = updatedList.find((b) => b.id === id);
+      if (target) upsertSupabaseBudget(target).catch(console.warn);
+      return updatedList;
+    });
   };
 
   const deleteBudget = (id: string) => {
     setBudgets((prev) => prev.filter((b) => b.id !== id));
+    deleteSupabaseBudget(id).catch(console.warn);
   };
 
   const addGoal = (goalData: Omit<FinancialGoal, 'id'>) => {
@@ -345,17 +493,21 @@ export function useFinanceData() {
       id: `g_${Date.now()}`,
     };
     setGoals((prev) => [...prev, newGoal]);
+    upsertSupabaseGoal(newGoal).catch(console.warn);
   };
 
   const updateGoal = (id: string, goalData: Partial<FinancialGoal>) => {
-    setGoals((prev) =>
-      prev.map((g) => (g.id === id ? { ...g, ...goalData } : g))
-    );
+    setGoals((prev) => {
+      const updatedList = prev.map((g) => (g.id === id ? { ...g, ...goalData } : g));
+      const target = updatedList.find((g) => g.id === id);
+      if (target) upsertSupabaseGoal(target).catch(console.warn);
+      return updatedList;
+    });
   };
 
   const depositToGoal = (id: string, amount: number) => {
-    setGoals((prev) =>
-      prev.map((g) => {
+    setGoals((prev) => {
+      const updatedList = prev.map((g) => {
         if (g.id === id) {
           const newAmount = Math.max(0, g.currentAmount + amount);
           const completed = newAmount >= g.targetAmount;
@@ -366,12 +518,16 @@ export function useFinanceData() {
           };
         }
         return g;
-      })
-    );
+      });
+      const target = updatedList.find((g) => g.id === id);
+      if (target) upsertSupabaseGoal(target).catch(console.warn);
+      return updatedList;
+    });
   };
 
   const deleteGoal = (id: string) => {
     setGoals((prev) => prev.filter((g) => g.id !== id));
+    deleteSupabaseGoal(id).catch(console.warn);
   };
 
   // Export transactions as CSV
@@ -469,6 +625,9 @@ export function useFinanceData() {
     categoryExpenses,
     monthlyTrends,
     budgetsWithProgress,
+    supabaseSync,
+    refreshSupabaseCheck,
+    syncAllToSupabaseAction,
     addTransaction,
     updateTransaction,
     deleteTransaction,

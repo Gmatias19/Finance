@@ -159,7 +159,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
               <span
                 className={`text-xs font-bold ${
                   healthScore >= 75
-                    ? 'text-emerald-400'
+                    ? 'text-sky-400'
                     : healthScore >= 50
                     ? 'text-amber-400'
                     : 'text-rose-400'
@@ -197,7 +197,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </span>
           <span
             className={`text-2xl font-bold mt-2 block ${
-              totalIncome - totalExpense >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              totalIncome - totalExpense >= 0 ? 'text-sky-400' : 'text-rose-400'
             }`}
           >
             {formatCurrency(totalIncome - totalExpense)}
@@ -337,7 +337,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 </div>
                 <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-emerald-500 rounded-full"
+                    className="h-full bg-sky-500 rounded-full"
                     style={{ width: `${item.percentage}%` }}
                   />
                 </div>

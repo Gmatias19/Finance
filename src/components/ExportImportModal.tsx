@@ -94,12 +94,12 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             <div
               className={`p-3.5 rounded-xl text-xs flex items-center gap-2.5 ${
                 feedback.type === 'success'
-                  ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/80'
+                  ? 'bg-sky-950/80 text-sky-300 border border-sky-800/80'
                   : 'bg-rose-950/80 text-rose-300 border border-rose-800/80'
               }`}
             >
               {feedback.type === 'success' ? (
-                <CheckCircle2 size={16} className="text-emerald-400 shrink-0" />
+                <CheckCircle2 size={16} className="text-sky-400 shrink-0" />
               ) : (
                 <AlertTriangle size={16} className="text-rose-400 shrink-0" />
               )}
@@ -116,7 +116,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
             {/* CSV Export */}
             <div className="flex items-center justify-between p-3.5 bg-slate-950 rounded-xl border border-slate-800">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-950/80 text-emerald-400 border border-emerald-800/40 flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-sky-950/80 text-sky-400 border border-sky-800/40 flex items-center justify-center shrink-0">
                   <FileSpreadsheet size={20} />
                 </div>
                 <div>

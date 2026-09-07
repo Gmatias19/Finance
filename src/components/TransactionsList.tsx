@@ -133,7 +133,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
           <button
             id="btn-add-transaction"
             onClick={onOpenNewTransaction}
-            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer shadow-sky-950/40"
           >
             <Plus size={16} className="stroke-[2.5]" />
             <span>Nova Transação</span>
@@ -150,16 +150,16 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
             onClick={() => handleTabChange('completed')}
             className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
               activeStatusTab === 'completed'
-                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-xs'
+                ? 'bg-sky-500/15 text-sky-400 border border-sky-500/30 shadow-xs'
                 : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 border border-transparent'
             }`}
           >
-            <CheckCircle2 size={16} className={activeStatusTab === 'completed' ? 'text-emerald-400' : 'text-slate-500'} />
+            <CheckCircle2 size={16} className={activeStatusTab === 'completed' ? 'text-sky-400' : 'text-slate-500'} />
             <span>Concluídos</span>
             <span
               className={`ml-1 text-xs px-2 py-0.5 rounded-full font-bold ${
                 activeStatusTab === 'completed'
-                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
                   : 'bg-slate-800 text-slate-400 border border-slate-700'
               }`}
             >
@@ -230,7 +230,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
               placeholder="Buscar por descrição, conta ou observação..."
               value={filters.search}
               onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all placeholder:text-slate-500"
+              className="w-full pl-10 pr-4 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition-all placeholder:text-slate-500"
             />
             {filters.search && (
               <button
@@ -258,7 +258,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
               onClick={() => setFilters((prev) => ({ ...prev, type: 'income' }))}
               className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
                 filters.type === 'income'
-                  ? 'bg-emerald-600 text-white shadow-xs'
+                  ? 'bg-sky-600 text-white shadow-xs'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
@@ -281,14 +281,14 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
             onClick={() => setShowAdvancedFilters((prev) => !prev)}
             className={`px-3 py-2 text-xs font-medium rounded-xl border flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
               showAdvancedFilters || hasActiveFilters
-                ? 'bg-emerald-950/60 border-emerald-700/80 text-emerald-300'
+                ? 'bg-sky-950/60 border-sky-700/80 text-sky-300'
                 : 'bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-800 hover:text-white'
             }`}
           >
             <SlidersHorizontal size={15} />
             <span>Filtros</span>
             {hasActiveFilters && (
-              <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span className="w-2 h-2 rounded-full bg-sky-400"></span>
             )}
           </button>
         </div>
@@ -303,7 +303,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                 id="filter-category"
                 value={filters.categoryId}
                 onChange={(e) => setFilters((prev) => ({ ...prev, categoryId: e.target.value }))}
-                className="w-full py-2 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full py-2 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none"
               >
                 <option value="all">Todas as Categorias</option>
                 {categories.map((c) => (
@@ -321,7 +321,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                 id="filter-payment"
                 value={filters.paymentMethod}
                 onChange={(e) => setFilters((prev) => ({ ...prev, paymentMethod: e.target.value }))}
-                className="w-full py-2 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full py-2 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none"
               >
                 <option value="all">Todas as Formas</option>
                 {Object.entries(paymentMethodLabels).map(([key, label]) => (
@@ -339,7 +339,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                 id="filter-sort"
                 value={filters.sortBy}
                 onChange={(e) => setFilters((prev) => ({ ...prev, sortBy: e.target.value as any }))}
-                className="w-full py-2 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                className="w-full py-2 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:ring-2 focus:ring-sky-500 focus:outline-none"
               >
                 <option value="date-desc">Mais Recentes Primeiro</option>
                 <option value="date-asc">Mais Antigas Primeiro</option>
@@ -378,7 +378,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
           <div className="flex items-center gap-4 flex-wrap">
             <div>
               <span className="text-slate-400">Recebido: </span>
-              <span className="font-semibold text-emerald-400">{formatCurrency(completedIncome)}</span>
+              <span className="font-semibold text-sky-400">{formatCurrency(completedIncome)}</span>
             </div>
             <div>
               <span className="text-slate-400">Pago: </span>
@@ -388,7 +388,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
               <span className="text-slate-400">Saldo Realizado: </span>
               <span
                 className={`font-bold ${
-                  completedIncome - completedExpense >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                  completedIncome - completedExpense >= 0 ? 'text-sky-400' : 'text-rose-400'
                 }`}
               >
                 {formatCurrency(completedIncome - completedExpense)}
@@ -401,7 +401,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
           <div className="flex items-center gap-4 flex-wrap">
             <div>
               <span className="text-slate-400">A Receber: </span>
-              <span className="font-semibold text-emerald-400">{formatCurrency(pendingIncome)}</span>
+              <span className="font-semibold text-sky-400">{formatCurrency(pendingIncome)}</span>
             </div>
             <div>
               <span className="text-slate-400">A Pagar: </span>
@@ -424,7 +424,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
           <div className="flex items-center gap-4 flex-wrap">
             <div>
               <span className="text-slate-400">Receitas: </span>
-              <span className="font-semibold text-emerald-400">
+              <span className="font-semibold text-sky-400">
                 {formatCurrency(completedIncome + pendingIncome)}
               </span>
             </div>
@@ -439,7 +439,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
               <span
                 className={`font-bold ${
                   completedIncome + pendingIncome - (completedExpense + pendingExpense) >= 0
-                    ? 'text-white'
+                    ? 'text-sky-400'
                     : 'text-rose-400'
                 }`}
               >
@@ -528,35 +528,35 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                     {/* Status Pill (Clickable to toggle) */}
                     <button
                       onClick={() => onToggleStatus(tx.id)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                         isCompleted
-                          ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-800/80 hover:bg-emerald-900/60'
+                          ? 'bg-sky-950/80 text-sky-400 border border-sky-800/80 hover:bg-sky-900/60'
                           : 'bg-amber-950/80 text-amber-300 border border-amber-800/80 hover:bg-amber-900/60 shadow-xs'
                       }`}
-                      title="Clique para alternar entre Pago e Pendente"
+                      title="Clique para alternar entre Pago/Recebido e Pendente"
                     >
                       {isCompleted ? (
                         <>
-                          <CheckCircle2 size={13} className="text-emerald-400" />
+                          <CheckCircle2 size={13} className="text-sky-400" />
                           <span>Concluído</span>
                         </>
                       ) : (
                         <>
                           <Clock size={13} className="text-amber-400" />
-                          <span>Pendente (Marcar Pago)</span>
+                          <span>{isIncome ? 'Receber agora' : 'Pagar agora'}</span>
                         </>
                       )}
                     </button>
 
                     {/* Amount */}
-                    <div className="text-right min-w-[120px]">
+                    <div className="text-right min-w-[110px]">
                       <div
                         className={`text-base font-bold flex items-center justify-end gap-0.5 ${
-                          isIncome ? 'text-emerald-400' : 'text-slate-100'
+                          isIncome ? 'text-sky-400' : 'text-slate-100'
                         }`}
                       >
                         {isIncome ? (
-                          <ArrowUpRight size={16} className="text-emerald-400 stroke-[2.5]" />
+                          <ArrowUpRight size={16} className="text-sky-400 stroke-[2.5]" />
                         ) : (
                           <ArrowDownRight size={16} className="text-rose-400 stroke-[2.5]" />
                         )}
@@ -566,11 +566,11 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                       </div>
                     </div>
 
-                    {/* Action buttons (Edit, Delete) */}
+                    {/* Action buttons (Edit, Delete) with touch friendly sizes */}
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => onEditTransaction(tx)}
-                        className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 sm:p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
                         title="Editar lançamento"
                         aria-label="Editar"
                       >
@@ -578,7 +578,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                       </button>
                       <button
                         onClick={() => onDeleteTransaction(tx.id)}
-                        className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 rounded-lg transition-colors cursor-pointer"
+                        className="p-2 sm:p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/50 rounded-lg transition-colors cursor-pointer"
                         title="Excluir lançamento"
                         aria-label="Excluir"
                       >
@@ -609,7 +609,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
             </p>
             <button
               onClick={onOpenNewTransaction}
-              className="mt-4 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 cursor-pointer shadow-xs transition-colors"
+              className="mt-4 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-xl inline-flex items-center gap-2 cursor-pointer shadow-xs transition-colors shadow-sky-950/40"
             >
               <Plus size={14} />
               Criar transação

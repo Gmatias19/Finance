@@ -109,7 +109,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
         <button
           id="btn-add-budget"
           onClick={handleOpenAdd}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+          className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto shadow-sky-950/40"
         >
           <Plus size={16} />
           <span>Definir Novo Teto</span>
@@ -148,7 +148,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
           </span>
           <span
             className={`text-2xl font-bold mt-2 block ${
-              totalBudgeted - totalSpentInBudgets >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              totalBudgeted - totalSpentInBudgets >= 0 ? 'text-sky-400' : 'text-rose-400'
             }`}
           >
             {formatCurrency(totalBudgeted - totalSpentInBudgets)}
@@ -168,7 +168,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
             ? 'bg-rose-500'
             : isWarning
             ? 'bg-amber-500'
-            : 'bg-emerald-500';
+            : 'bg-sky-500';
 
           return (
             <div
@@ -243,7 +243,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                   </span>
                   <span
                     className={`font-semibold ${
-                      budget.remaining < 0 ? 'text-rose-400' : 'text-emerald-400'
+                      budget.remaining < 0 ? 'text-rose-400' : 'text-sky-400'
                     }`}
                   >
                     {budget.remaining >= 0
@@ -259,7 +259,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
 
       {/* Educational Rule 50/30/20 Section */}
       <div className="bg-slate-900 text-white p-6 rounded-2xl border border-slate-800 shadow-sm space-y-3">
-        <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+        <div className="flex items-center gap-2 text-sky-400 font-bold text-sm">
           <HelpCircle size={18} />
           <span>Dica de Gestão: A Regra 50-30-20</span>
         </div>
@@ -268,7 +268,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
           <div className="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
-            <span className="text-xs font-bold text-emerald-400 block mb-1">50% Essenciais</span>
+            <span className="text-xs font-bold text-sky-400 block mb-1">50% Essenciais</span>
             <p className="text-[11px] text-slate-300">
               Moradia, alimentação, contas básicas, saúde e transporte.
             </p>
@@ -320,7 +320,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                   value={categoryId}
                   disabled={!!editingBudget}
                   onChange={(e) => setCategoryId(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 >
                   {expenseCategories.map((c) => (
                     <option key={c.id} value={c.id}>
@@ -347,7 +347,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                     placeholder="Ex: 1500"
                     value={limit}
                     onChange={(e) => setLimit(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -362,7 +362,7 @@ export const BudgetsView: React.FC<BudgetsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer"
+                  className="px-5 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-xs flex items-center gap-1.5 cursor-pointer shadow-sky-950/40"
                 >
                   <Check size={16} />
                   <span>Salvar Orçamento</span>

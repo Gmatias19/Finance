@@ -168,7 +168,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 onClick={() => setType('income')}
                 className={`py-2 text-xs sm:text-sm font-bold rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
                   type === 'income'
-                    ? 'bg-emerald-600 text-white shadow-xs'
+                    ? 'bg-sky-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -190,7 +190,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               placeholder="Ex: Supermercado Semanal, Salário Mensal, Gasolina..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+              className="w-full px-3.5 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
             />
           </div>
 
@@ -213,7 +213,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                   placeholder="0,00"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                  className="w-full pl-10 pr-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
                 />
               </div>
             </div>
@@ -228,7 +228,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 required
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               />
             </div>
           </div>
@@ -243,7 +243,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 id="select-tx-category"
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               >
                 {availableCategories.map((c) => (
                   <option key={c.id} value={c.id} className="bg-slate-900">
@@ -261,7 +261,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 id="select-tx-payment"
                 value={paymentMethod}
                 onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
-                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               >
                 {Object.entries(paymentMethodLabels).map(([key, label]) => (
                   <option key={key} value={key} className="bg-slate-900">
@@ -282,7 +282,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 id="select-tx-account"
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               >
                 {accounts.map((acc) => (
                   <option key={acc.id} value={acc.name} className="bg-slate-900">
@@ -301,7 +301,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
                 id="select-tx-status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as any)}
-                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors"
+                className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
               >
                 <option value="completed" className="bg-slate-900">Concluído / Já Pago ou Recebido</option>
                 <option value="pending" className="bg-slate-900">Pendente / Agendado</option>
@@ -324,7 +324,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               type="checkbox"
               checked={isRecurring}
               onChange={(e) => setIsRecurring(e.target.checked)}
-              className="w-4 h-4 text-emerald-500 rounded border-slate-700 focus:ring-emerald-500 cursor-pointer accent-emerald-600"
+              className="w-4 h-4 text-sky-500 rounded border-slate-700 focus:ring-sky-500 cursor-pointer accent-sky-600"
             />
           </div>
 
@@ -339,7 +339,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
               placeholder="Anotações, número de parcelas, código ou detalhes..."
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors resize-none"
+              className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors resize-none"
             />
           </div>
 
@@ -355,7 +355,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <button
               id="btn-save-transaction"
               type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 active:scale-95 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              className="px-5 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 active:scale-95 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-sky-950/40"
             >
               <Check size={16} />
               <span>Salvar Lançamento</span>

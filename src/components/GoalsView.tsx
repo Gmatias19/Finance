@@ -150,7 +150,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
         <button
           id="btn-add-goal"
           onClick={handleOpenAdd}
-          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto"
+          className="px-4 py-2 bg-sky-600 hover:bg-sky-500 active:scale-95 text-white text-sm font-semibold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer self-start sm:self-auto shadow-sky-950/40"
         >
           <Plus size={16} />
           <span>Criar Nova Meta</span>
@@ -163,7 +163,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
             Total Acumulado em Metas
           </span>
-          <span className="text-2xl font-bold text-emerald-400 mt-2 block">
+          <span className="text-2xl font-bold text-sky-400 mt-2 block">
             {formatCurrency(totalSavedInGoals)}
           </span>
           <span className="text-xs text-slate-500 mt-1 block">
@@ -210,7 +210,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
               key={goal.id}
               id={`goal-card-${goal.id}`}
               className={`bg-slate-900 rounded-2xl border p-5 shadow-xs flex flex-col justify-between transition-all ${
-                isDone ? 'border-emerald-800/80 bg-emerald-950/20' : 'border-slate-800'
+                isDone ? 'border-sky-800/80 bg-sky-950/20' : 'border-slate-800'
               }`}
             >
               <div>
@@ -220,8 +220,8 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                     <div
                       className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-xs"
                       style={{
-                        backgroundColor: isDone ? 'rgba(6, 78, 59, 0.6)' : 'rgba(30, 58, 138, 0.6)',
-                        color: isDone ? '#34d399' : '#60a5fa',
+                        backgroundColor: isDone ? 'rgba(12, 74, 110, 0.6)' : 'rgba(30, 58, 138, 0.6)',
+                        color: isDone ? '#38bdf8' : '#60a5fa',
                       }}
                     >
                       {isDone ? <Trophy size={20} /> : <Target size={20} />}
@@ -275,7 +275,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                     <div className="w-full h-3 bg-slate-800 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-700 ${
-                          isDone ? 'bg-emerald-500' : 'bg-indigo-500'
+                          isDone ? 'bg-sky-500' : 'bg-indigo-500'
                         }`}
                         style={{ width: `${Math.min(100, progress)}%` }}
                       />
@@ -295,7 +295,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                       <span>Até {formatDate(goal.targetDate)}</span>
                     </div>
                     {isDone && (
-                      <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1">
+                      <span className="text-sky-400 font-bold text-[11px] flex items-center gap-1">
                         <Sparkles size={12} /> Concluída!
                       </span>
                     )}
@@ -364,7 +364,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                     placeholder="100,00"
                     value={depositAmount}
                     onChange={(e) => setDepositAmount(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 text-base font-bold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full pl-10 pr-3 py-2 text-base font-bold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -393,7 +393,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-xs cursor-pointer"
+                  className="px-5 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-xs cursor-pointer shadow-sky-950/40"
                 >
                   Confirmar Aporte
                 </button>
@@ -436,7 +436,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   placeholder="Ex: Reserva de Emergência, Viagem para Europa..."
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
 
@@ -453,7 +453,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                     placeholder="Ex: 10000"
                     value={targetAmount}
                     onChange={(e) => setTargetAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
 
@@ -468,7 +468,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                     placeholder="0"
                     value={currentAmount}
                     onChange={(e) => setCurrentAmount(e.target.value)}
-                    className="w-full px-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-sm font-semibold bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
               </div>
@@ -482,7 +482,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                     type="date"
                     value={targetDate}
                     onChange={(e) => setTargetDate(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
 
@@ -493,7 +493,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                   >
                     <option value="Segurança">Segurança / Reserva</option>
                     <option value="Lazer">Lazer & Viagens</option>
@@ -513,7 +513,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                   placeholder="Detalhes, motivo da meta ou estratégia de economia..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 resize-none"
                 />
               </div>
 
@@ -527,7 +527,7 @@ export const GoalsView: React.FC<GoalsViewProps> = ({
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-xs cursor-pointer"
+                  className="px-5 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow-xs cursor-pointer shadow-sky-950/40"
                 >
                   {editingGoal ? 'Atualizar Meta' : 'Salvar Meta'}
                 </button>
