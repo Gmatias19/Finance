@@ -174,7 +174,7 @@ export const SupabaseSyncModal: React.FC<SupabaseSyncModalProps> = ({
 
             <p className="text-xs text-slate-400">
               {isConnected
-                ? 'Todas as informações novas adicionadas (transações, receitas, metas) são salvas e persistidas automaticamente no seu banco de dados Supabase.'
+                ? 'Todas as informações novas adicionadas, como transações, receitas e metas, são salvas e persistidas automaticamente no seu banco de dados Supabase.'
                 : 'O cliente Supabase está configurado com as suas credenciais! Para que os dados sejam gravados no banco remoto, execute o script SQL abaixo uma única vez no painel do Supabase.'}
             </p>
           </div>
@@ -184,7 +184,7 @@ export const SupabaseSyncModal: React.FC<SupabaseSyncModalProps> = ({
             <div className="p-4 bg-amber-950/30 rounded-xl border border-amber-800/50 space-y-3">
               <div className="flex items-center gap-2 text-amber-300 font-bold text-xs">
                 <ShieldCheck size={16} />
-                <span>Como criar as tabelas no Supabase (leva 30 segundos):</span>
+                <span>Como criar as tabelas no Supabase em poucos segundos:</span>
               </div>
               <ol className="text-xs text-slate-300 space-y-1.5 list-decimal pl-4">
                 <li>

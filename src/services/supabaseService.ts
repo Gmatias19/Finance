@@ -14,72 +14,157 @@ export interface SupabaseSyncState {
 }
 
 // SQL Schema for the user to run in Supabase SQL Editor if tables don't exist yet
-export const SUPABASE_SQL_SCHEMA = `-- Script SQL para criar as tabelas do Controle Financeiro no Supabase
+export const SUPABASE_SQL_SCHEMA = `-- ==============================================================================
+-- SCRIPT SQL COMPLETO: CONTROLE FINANCEIRO (FINANCE) - SUPABASE
 -- Execute este script no "SQL Editor" do seu painel Supabase (https://supabase.com/dashboard)
+-- Este script cria todas as tabelas, campos editáveis, políticas de segurança (RLS)
+-- e habilita o Realtime para sincronização em tempo real entre todos os usuários.
+-- ==============================================================================
 
--- 1. Tabela de Transações (Receitas e Despesas)
+-- 1. TABELA DE TRANSAÇÕES (RECEITAS E DESPESAS)
 CREATE TABLE IF NOT EXISTS public.transactions (
   id TEXT PRIMARY KEY,
   description TEXT NOT NULL,
-  amount NUMERIC(12, 2) NOT NULL,
+  amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
   type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
   category_id TEXT NOT NULL,
-  date TEXT NOT NULL,
-  payment_method TEXT NOT NULL,
-  account TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'completed',
+  date TEXT NOT NULL, -- Formato: YYYY-MM-DD
+  payment_method TEXT NOT NULL, -- ex: pix, credit, debit, cash, transfer, other
+  account TEXT NOT NULL, -- ex: Conta Corrente, Carteira, Nubank
+  status TEXT NOT NULL DEFAULT 'completed' CHECK (status IN ('completed', 'pending')),
   is_recurring BOOLEAN DEFAULT false,
+  recurring_group_id TEXT,
+  is_installment BOOLEAN DEFAULT false,
+  installment_group_id TEXT,
+  installment_number INTEGER,
+  installment_total INTEGER,
   notes TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. Tabela de Orçamentos Mensais
+-- Migrações automáticas caso a tabela já tenha sido criada anteriormente:
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS recurring_group_id TEXT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS is_installment BOOLEAN DEFAULT false;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS installment_group_id TEXT;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS installment_number INTEGER;
+ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS installment_total INTEGER;
+
+-- 2. TABELA DE ORÇAMENTOS MENSAIS
 CREATE TABLE IF NOT EXISTS public.budgets (
   id TEXT PRIMARY KEY,
   category_id TEXT NOT NULL,
-  monthly_limit NUMERIC(12, 2) NOT NULL,
+  monthly_limit NUMERIC(12, 2) NOT NULL DEFAULT 0,
   period TEXT NOT NULL DEFAULT 'general',
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. Tabela de Metas Financeiras
+-- 3. TABELA DE METAS FINANCEIRAS
 CREATE TABLE IF NOT EXISTS public.goals (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
-  target_amount NUMERIC(12, 2) NOT NULL,
+  target_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
   current_amount NUMERIC(12, 2) DEFAULT 0,
-  target_date TEXT NOT NULL,
+  target_date TEXT NOT NULL, -- Formato: YYYY-MM-DD
   category TEXT NOT NULL,
   icon TEXT,
   color TEXT,
   notes TEXT,
   completed BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 4. Tabela de Contas Financeiras / Carteiras
+-- 4. TABELA DE CONTAS E CARTEIRAS
 CREATE TABLE IF NOT EXISTS public.accounts (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  type TEXT NOT NULL,
+  type TEXT NOT NULL, -- ex: checking, savings, investment, cash, credit
   balance NUMERIC(12, 2) DEFAULT 0,
   institution TEXT,
   color TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. TABELA DE CATEGORIAS
+CREATE TABLE IF NOT EXISTS public.categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+  color TEXT NOT NULL,
+  bg_color TEXT,
+  icon TEXT NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. Habilitar Políticas de Segurança Row Level Security (RLS) permissivas para uso
+-- 6. ÍNDICES PARA ALTA PERFORMANCE NAS CONSULTAS
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(date DESC);
+CREATE INDEX IF NOT EXISTS idx_transactions_type ON public.transactions(type);
+CREATE INDEX IF NOT EXISTS idx_transactions_category ON public.transactions(category_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON public.transactions(status);
+CREATE INDEX IF NOT EXISTS idx_budgets_category ON public.budgets(category_id);
+
+-- 7. REPLICA IDENTITY FULL (Necessário para broadcast completo de UPDATE e DELETE no Realtime)
+ALTER TABLE public.transactions REPLICA IDENTITY FULL;
+ALTER TABLE public.budgets REPLICA IDENTITY FULL;
+ALTER TABLE public.goals REPLICA IDENTITY FULL;
+ALTER TABLE public.accounts REPLICA IDENTITY FULL;
+ALTER TABLE public.categories REPLICA IDENTITY FULL;
+
+-- 8. POLÍTICAS DE SEGURANÇA (ROW LEVEL SECURITY - RLS)
+-- Permite leitura, inserção, atualização e exclusão públicas para os usuários do app
 ALTER TABLE public.transactions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Permitir acesso total em transacoes" ON public.transactions FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir acesso total em transacoes" ON public.transactions;
+CREATE POLICY "Permitir acesso total em transacoes" ON public.transactions
+  FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Permitir acesso total em orcamentos" ON public.budgets FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir acesso total em orcamentos" ON public.budgets;
+CREATE POLICY "Permitir acesso total em orcamentos" ON public.budgets
+  FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Permitir acesso total em metas" ON public.goals FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir acesso total em metas" ON public.goals;
+CREATE POLICY "Permitir acesso total em metas" ON public.goals
+  FOR ALL USING (true) WITH CHECK (true);
 
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Permitir acesso total em contas" ON public.accounts FOR ALL USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Permitir acesso total em contas" ON public.accounts;
+CREATE POLICY "Permitir acesso total em contas" ON public.accounts
+  FOR ALL USING (true) WITH CHECK (true);
+
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Permitir acesso total em categorias" ON public.categories;
+CREATE POLICY "Permitir acesso total em categorias" ON public.categories
+  FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. HABILITAR PUBLICAÇÃO EM TEMPO REAL (SUPABASE REALTIME)
+-- Faz com que qualquer inserção, alteração ou exclusão seja transmitida instantaneamente a todos os usuários conectados
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.transactions;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.budgets;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.goals;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.accounts;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.categories;
+  EXCEPTION WHEN duplicate_object THEN NULL;
+  END;
+END $$;
 `;
 
 /**
@@ -161,6 +246,11 @@ export async function fetchSupabaseTransactions(): Promise<Transaction[] | null>
       account: row.account,
       status: row.status || 'completed',
       isRecurring: !!row.is_recurring,
+      recurringGroupId: row.recurring_group_id || undefined,
+      isInstallment: !!row.is_installment,
+      installmentGroupId: row.installment_group_id || undefined,
+      installmentNumber: row.installment_number || undefined,
+      installmentTotal: row.installment_total || undefined,
       notes: row.notes || undefined,
       createdAt: row.created_at || row.createdAt || new Date().toISOString(),
     }));
@@ -186,6 +276,11 @@ export async function upsertSupabaseTransaction(tx: Transaction): Promise<boolea
       account: tx.account,
       status: tx.status,
       is_recurring: !!tx.isRecurring,
+      recurring_group_id: tx.recurringGroupId || null,
+      is_installment: !!tx.isInstallment,
+      installment_group_id: tx.installmentGroupId || null,
+      installment_number: tx.installmentNumber || null,
+      installment_total: tx.installmentTotal || null,
       notes: tx.notes || null,
       created_at: tx.createdAt || new Date().toISOString(),
     };

@@ -374,10 +374,10 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
         <div className="text-slate-400">
           Exibindo <strong className="text-white font-bold">{transactions.length}</strong>{' '}
           {activeStatusTab === 'completed'
-            ? 'lançamento(s) concluído(s)'
+            ? 'lançamentos concluídos'
             : activeStatusTab === 'pending'
-            ? 'lançamento(s) pendente(s)'
-            : 'lançamento(s) no total'}
+            ? 'lançamentos pendentes'
+            : 'lançamentos no total'}
         </div>
 
         {activeStatusTab === 'completed' && (
@@ -501,7 +501,12 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                         </span>
                         {tx.isRecurring && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded">
-                            <Repeat size={10} /> Recorrente
+                            <Repeat size={10} /> Fixo
+                          </span>
+                        )}
+                        {tx.isInstallment && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-indigo-950/70 text-indigo-300 border border-indigo-800/60 px-1.5 py-0.5 rounded">
+                            Parcela {tx.installmentNumber}/{tx.installmentTotal}
                           </span>
                         )}
                       </div>
@@ -511,7 +516,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                           {cat?.name || 'Geral'}
                         </span>
                         <span>•</span>
-                        <span>{formatDate(tx.date)}</span>
+                        <span>Vencimento: {formatDate(tx.date)}</span>
                         <span>•</span>
                         <span className="text-slate-400">
                           {paymentMethodLabels[tx.paymentMethod] || tx.paymentMethod}
@@ -539,17 +544,25 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                           ? 'bg-sky-950/80 text-sky-400 border border-sky-800/80 hover:bg-sky-900/60'
                           : 'bg-amber-950/80 text-amber-300 border border-amber-800/80 hover:bg-amber-900/60 shadow-xs'
                       }`}
-                      title="Clique para alternar entre Pago/Recebido e Pendente"
+                      title={
+                        isCompleted
+                          ? isIncome
+                            ? 'Alternar para A Receber'
+                            : 'Alternar para Pendente'
+                          : isIncome
+                          ? 'Alternar para Recebido'
+                          : 'Alternar para Pago'
+                      }
                     >
                       {isCompleted ? (
                         <>
                           <CheckCircle2 size={13} className="text-sky-400" />
-                          <span>Concluído</span>
+                          <span>{isIncome ? 'Recebido' : 'Pago'}</span>
                         </>
                       ) : (
                         <>
                           <Clock size={13} className="text-amber-400" />
-                          <span>{isIncome ? 'Receber agora' : 'Pagar agora'}</span>
+                          <span>{isIncome ? 'A Receber' : 'Pendente'}</span>
                         </>
                       )}
                     </button>

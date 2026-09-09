@@ -124,7 +124,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                     Exportar Planilha CSV
                   </span>
                   <span className="text-xs text-slate-400">
-                    Compatível com Excel, Google Sheets e Calc ({transactionCount} lançamentos)
+                    Compatível com Excel, Google Sheets e Calc - {transactionCount} lançamentos
                   </span>
                 </div>
               </div>
@@ -145,7 +145,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-sm text-white block">
-                    Backup Completo (JSON)
+                    Backup Completo em JSON
                   </span>
                   <span className="text-xs text-slate-400">
                     Salva todas as transações, metas e orçamentos

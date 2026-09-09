@@ -87,6 +87,24 @@ export const getAdjacentMonth = (yearMonthString: string, delta: number): string
   return `${y}-${m}`;
 };
 
+// Calculate date by adding N months, respecting days in month
+export const addMonthsToDate = (dateString: string, monthsToAdd: number): string => {
+  if (!dateString) return dateString;
+  const [year, month, day] = dateString.split('-').map(Number);
+  const targetDate = new Date(year, month - 1 + monthsToAdd, 1);
+  const targetYear = targetDate.getFullYear();
+  const targetMonth = targetDate.getMonth();
+  
+  // Find last day of target month to clamp
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+  const clampedDay = Math.min(day, lastDayOfTargetMonth);
+  
+  const yStr = String(targetYear);
+  const mStr = String(targetMonth + 1).padStart(2, '0');
+  const dStr = String(clampedDay).padStart(2, '0');
+  return `${yStr}-${mStr}-${dStr}`;
+};
+
 // Human payment method names
 export const paymentMethodLabels: Record<string, string> = {
   pix: 'Pix',

@@ -68,7 +68,7 @@ interface OverviewProps {
   }>;
   recentTransactions: Transaction[];
   categoryMap: Map<string, Category>;
-  onNavigateTab: (tab: ActiveTab) => void;
+  onNavigateTab: (tab: ActiveTab, subType?: 'all' | 'income' | 'expense') => void;
   onOpenNewTransaction: () => void;
 }
 
@@ -149,7 +149,7 @@ export const Overview: React.FC<OverviewProps> = ({
         <div id="card-saldo-geral" className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Saldo Líquido ({formatMonthYear(selectedMonth).split(' ')[0]})
+              Saldo Líquido Mensal
             </span>
             <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300">
               <Wallet size={18} />
@@ -170,13 +170,28 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        {/* Card 2: Receitas (Azul Baleia) */}
-        <div id="card-receitas" className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs relative overflow-hidden">
+        {/* Card 2: Receitas Realizadas (Atalho para lançamentos e sub-aba Receitas) */}
+        <div
+          id="card-receitas"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTab('transactions', 'income')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              onNavigateTab('transactions', 'income');
+            }
+          }}
+          className="bg-slate-900 p-5 rounded-2xl border border-slate-800 hover:border-sky-600/80 shadow-xs relative overflow-hidden cursor-pointer group transition-all"
+          title="Clique para abrir lançamentos e a sub-aba Receitas"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Receitas Realizadas
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-sky-950/60 text-sky-400 border border-sky-800/40 flex items-center justify-center">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-400 group-hover:text-sky-400 uppercase tracking-wider transition-colors">
+                Receitas Realizadas
+              </span>
+              <ArrowUpRight size={14} className="text-slate-500 group-hover:text-sky-400 transition-colors" />
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-sky-950/60 text-sky-400 border border-sky-800/40 group-hover:border-sky-600 flex items-center justify-center transition-colors">
               <TrendingUp size={18} />
             </div>
           </div>
@@ -197,13 +212,28 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        {/* Card 3: Despesas */}
-        <div id="card-despesas" className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs relative overflow-hidden">
+        {/* Card 3: Despesas Realizadas (Atalho para lançamentos e sub-aba Despesas) */}
+        <div
+          id="card-despesas"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTab('transactions', 'expense')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              onNavigateTab('transactions', 'expense');
+            }
+          }}
+          className="bg-slate-900 p-5 rounded-2xl border border-slate-800 hover:border-rose-600/80 shadow-xs relative overflow-hidden cursor-pointer group transition-all"
+          title="Clique para abrir lançamentos e a sub-aba Despesas"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Despesas Realizadas
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/40 flex items-center justify-center">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-400 group-hover:text-rose-400 uppercase tracking-wider transition-colors">
+                Despesas Realizadas
+              </span>
+              <ArrowDownRight size={14} className="text-slate-500 group-hover:text-rose-400 transition-colors" />
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-rose-950/60 text-rose-400 border border-rose-800/40 group-hover:border-rose-600 flex items-center justify-center transition-colors">
               <TrendingDown size={18} />
             </div>
           </div>
@@ -267,7 +297,7 @@ export const Overview: React.FC<OverviewProps> = ({
                       : 'bg-amber-950/80 text-amber-300 border border-amber-800'
                   }`}
                 >
-                  {b.category?.name}: {b.percentage.toFixed(0)}% do teto ({formatCurrency(b.spent)} / {formatCurrency(b.monthlyLimit)})
+                  {b.category?.name}: {b.percentage.toFixed(0)}% do teto - {formatCurrency(b.spent)} de {formatCurrency(b.monthlyLimit)}
                 </span>
               ))}
             </div>
@@ -288,7 +318,7 @@ export const Overview: React.FC<OverviewProps> = ({
           <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-base font-bold text-white">
-                Evolução Mensal (Receitas vs Despesas)
+                Evolução Mensal - Receitas vs Despesas
               </h2>
               <p className="text-xs text-slate-400">
                 Histórico recente dos últimos meses registrados
@@ -510,10 +540,10 @@ export const Overview: React.FC<OverviewProps> = ({
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                           <span>{cat?.name || 'Geral'}</span>
                           <span>•</span>
-                          <span>{formatDate(tx.date)}</span>
+                          <span>Vencimento: {formatDate(tx.date)}</span>
                           {tx.status === 'pending' && (
                             <span className="text-amber-300 font-medium bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.2 rounded text-[10px]">
-                              Pendente
+                              {isIncome ? 'A Receber' : 'Pendente'}
                             </span>
                           )}
                         </div>

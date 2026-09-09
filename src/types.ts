@@ -24,11 +24,16 @@ export interface Transaction {
   amount: number;
   type: TransactionType;
   categoryId: string;
-  date: string; // YYYY-MM-DD
+  date: string; // YYYY-MM-DD (Data de Vencimento)
   paymentMethod: PaymentMethod;
   account: string;
   status: 'completed' | 'pending';
   isRecurring?: boolean;
+  recurringGroupId?: string;
+  isInstallment?: boolean;
+  installmentGroupId?: string;
+  installmentNumber?: number;
+  installmentTotal?: number;
   notes?: string;
   createdAt: string;
 }

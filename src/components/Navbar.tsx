@@ -88,8 +88,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   id="btn-prev-month"
                   onClick={handlePrevMonth}
-                  title={`Mês anterior (${prevMonthLabel})`}
-                  aria-label={`Mês anterior (${prevMonthLabel})`}
+                  title={`Mês anterior: ${prevMonthLabel}`}
+                  aria-label={`Mês anterior: ${prevMonthLabel}`}
                   className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-700/80 active:bg-slate-600 rounded-lg transition-colors cursor-pointer"
                 >
                   <ChevronLeft size={16} />
@@ -123,8 +123,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   id="btn-next-month"
                   onClick={handleNextMonth}
-                  title={`Próximo mês (${nextMonthLabel})`}
-                  aria-label={`Próximo mês (${nextMonthLabel})`}
+                  title={`Próximo mês: ${nextMonthLabel}`}
+                  aria-label={`Próximo mês: ${nextMonthLabel}`}
                   className="p-1.5 sm:p-2 text-slate-400 hover:text-white hover:bg-slate-700/80 active:bg-slate-600 rounded-lg transition-colors cursor-pointer"
                 >
                   <ChevronRight size={16} />

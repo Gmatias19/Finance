@@ -174,10 +174,26 @@ export function useFinanceData() {
                 if (prev.some((t) => t.id === newTx.id)) return prev;
                 return [newTx, ...prev];
               });
+            } else if (msg.type === 'TRANSACTIONS_BATCH_CREATED' && Array.isArray(msg.data)) {
+              const newTxs = msg.data;
+              setTransactions((prev) => {
+                const existing = new Set(prev.map((t) => t.id));
+                const filtered = newTxs.filter((t: any) => !existing.has(t.id));
+                return [...filtered, ...prev];
+              });
             } else if (msg.type === 'TRANSACTION_UPDATED' && msg.data) {
               const updated = msg.data;
               setTransactions((prev) =>
                 prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t))
+              );
+            } else if (msg.type === 'TRANSACTIONS_BATCH_UPDATED' && Array.isArray(msg.data)) {
+              const updatedList = msg.data;
+              const map = new Map<string, any>(updatedList.map((t: any) => [t.id, t]));
+              setTransactions((prev) =>
+                prev.map((t) => {
+                  const item = map.get(t.id);
+                  return item ? { ...t, ...item } : t;
+                })
               );
             } else if (msg.type === 'TRANSACTION_DELETED' && msg.data) {
               const { id } = msg.data;
@@ -567,6 +583,33 @@ export function useFinanceData() {
     return newTx;
   };
 
+  const addTransactionsBatch = (txsData: Array<Omit<Transaction, 'id' | 'createdAt'>>) => {
+    const createdItems: Transaction[] = txsData.map((txData, idx) => ({
+      ...txData,
+      id: `tx_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 4)}`,
+      createdAt: new Date().toISOString(),
+    }));
+
+    // 1. Optimistic local update
+    setTransactions((prev) => [...createdItems, ...prev]);
+
+    // 2. Central server persist & broadcast
+    fetch('/api/transactions/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(createdItems),
+    }).catch((err) => {
+      console.warn('[Sync] Erro ao sincronizar lote de transações:', err);
+    });
+
+    // 3. Supabase sync
+    createdItems.forEach((tx) => {
+      upsertSupabaseTransaction(tx).catch(console.warn);
+    });
+
+    return createdItems;
+  };
+
   const updateTransaction = (id: string, txData: Partial<Transaction>) => {
     setTransactions((prev) => {
       const updatedList = prev.map((t) => (t.id === id ? { ...t, ...txData } : t));
@@ -586,6 +629,117 @@ export function useFinanceData() {
           console.warn('[Supabase] Erro ao atualizar transação:', err);
         });
       }
+      return updatedList;
+    });
+  };
+
+  const updateRecurringGroup = (
+    groupId: string,
+    fromDate: string,
+    updates: Partial<Transaction>,
+    currentId: string
+  ) => {
+    setTransactions((prev) => {
+      const affectedIds: string[] = [];
+      const updatedList = prev.map((t) => {
+        // Always apply updates to the current edited transaction
+        if (t.id === currentId) {
+          affectedIds.push(t.id);
+          return { ...t, ...updates };
+        }
+        // For other recurring items in this group: ONLY update if status is 'pending' (do not touch paid/received!)
+        if (t.recurringGroupId === groupId && t.status === 'pending' && t.date >= fromDate) {
+          affectedIds.push(t.id);
+          return {
+            ...t,
+            amount: updates.amount !== undefined ? updates.amount : t.amount,
+            type: updates.type !== undefined ? updates.type : t.type,
+            categoryId: updates.categoryId !== undefined ? updates.categoryId : t.categoryId,
+            paymentMethod: updates.paymentMethod !== undefined ? updates.paymentMethod : t.paymentMethod,
+            account: updates.account !== undefined ? updates.account : t.account,
+            description: updates.description !== undefined ? updates.description : t.description,
+            notes: updates.notes !== undefined ? updates.notes : t.notes,
+          };
+        }
+        return t;
+      });
+
+      // Central server batch update
+      fetch('/api/transactions/batch', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ids: affectedIds,
+          updates: {
+            amount: updates.amount,
+            type: updates.type,
+            categoryId: updates.categoryId,
+            paymentMethod: updates.paymentMethod,
+            account: updates.account,
+            description: updates.description,
+            notes: updates.notes,
+          },
+        }),
+      }).catch(console.warn);
+
+      // Supabase sync
+      const affectedTxs = updatedList.filter((t) => affectedIds.includes(t.id));
+      affectedTxs.forEach((tx) => upsertSupabaseTransaction(tx).catch(console.warn));
+
+      return updatedList;
+    });
+  };
+
+  const updateInstallmentGroup = (
+    groupId: string,
+    fromNumber: number,
+    updates: Partial<Transaction>,
+    currentId: string
+  ) => {
+    setTransactions((prev) => {
+      const affectedIds: string[] = [];
+      const updatedList = prev.map((t) => {
+        // Update current transaction
+        if (t.id === currentId) {
+          affectedIds.push(t.id);
+          return { ...t, ...updates };
+        }
+        // For other installments: ONLY update if status is 'pending' and installmentNumber >= fromNumber (never touch completed!)
+        if (
+          t.installmentGroupId === groupId &&
+          t.status === 'pending' &&
+          (t.installmentNumber || 0) >= fromNumber
+        ) {
+          affectedIds.push(t.id);
+          let updatedDesc = t.description;
+          if (updates.description) {
+            const baseCleanDesc = updates.description.replace(/\s*\d+\/\d+$/, '');
+            updatedDesc = `${baseCleanDesc} ${t.installmentNumber}/${t.installmentTotal}`;
+          }
+          return {
+            ...t,
+            amount: updates.amount !== undefined ? updates.amount : t.amount,
+            type: updates.type !== undefined ? updates.type : t.type,
+            categoryId: updates.categoryId !== undefined ? updates.categoryId : t.categoryId,
+            paymentMethod: updates.paymentMethod !== undefined ? updates.paymentMethod : t.paymentMethod,
+            account: updates.account !== undefined ? updates.account : t.account,
+            description: updatedDesc,
+            notes: updates.notes !== undefined ? updates.notes : t.notes,
+          };
+        }
+        return t;
+      });
+
+      const affectedTxs = updatedList.filter((t) => affectedIds.includes(t.id));
+      affectedTxs.forEach((tx) => {
+        fetch(`/api/transactions/${tx.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(tx),
+        }).catch(console.warn);
+        upsertSupabaseTransaction(tx).catch(console.warn);
+      });
+
       return updatedList;
     });
   };
@@ -867,7 +1021,10 @@ export function useFinanceData() {
     refreshSupabaseCheck,
     syncAllToSupabaseAction,
     addTransaction,
+    addTransactionsBatch,
     updateTransaction,
+    updateRecurringGroup,
+    updateInstallmentGroup,
     deleteTransaction,
     toggleTransactionStatus,
     addBudget,

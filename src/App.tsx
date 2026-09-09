@@ -33,7 +33,10 @@ export default function App() {
     refreshSupabaseCheck,
     syncAllToSupabaseAction,
     addTransaction,
+    addTransactionsBatch,
     updateTransaction,
+    updateRecurringGroup,
+    updateInstallmentGroup,
     deleteTransaction,
     toggleTransactionStatus,
     addBudget,
@@ -67,6 +70,13 @@ export default function App() {
 
   const handleSelectedMonthChange = (month: string) => {
     setFilters((prev) => ({ ...prev, month }));
+  };
+
+  const handleNavigateTab = (tab: ActiveTab, subType?: 'all' | 'income' | 'expense') => {
+    setActiveTab(tab);
+    if (subType) {
+      setFilters((prev) => ({ ...prev, type: subType }));
+    }
   };
 
   if (!isLoaded) {
@@ -108,7 +118,7 @@ export default function App() {
             budgetsWithProgress={budgetsWithProgress}
             recentTransactions={filteredTransactions}
             categoryMap={categoryMap}
-            onNavigateTab={setActiveTab}
+            onNavigateTab={handleNavigateTab}
             onOpenNewTransaction={handleOpenNewTransaction}
           />
         )}
@@ -165,7 +175,10 @@ export default function App() {
         isOpen={isTransactionModalOpen}
         onClose={() => setIsTransactionModalOpen(false)}
         onSave={addTransaction}
+        onSaveBatch={addTransactionsBatch}
         onUpdate={updateTransaction}
+        onUpdateRecurringGroup={updateRecurringGroup}
+        onUpdateInstallmentGroup={updateInstallmentGroup}
         editingTransaction={editingTransaction}
         categories={categories}
         accounts={accounts}

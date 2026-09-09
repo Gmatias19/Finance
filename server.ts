@@ -164,6 +164,62 @@ app.post("/api/transactions", (req, res) => {
   res.status(201).json(newTx);
 });
 
+// Batch create transactions (e.g. recurring or installments)
+app.post("/api/transactions/batch", (req, res) => {
+  const items = req.body;
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ error: "Lista de transações inválida." });
+  }
+
+  const store = readStore();
+  const createdItems = items.map((tx: any, idx: number) => ({
+    ...tx,
+    id: tx.id || `tx_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 5)}`,
+    createdAt: tx.createdAt || new Date().toISOString(),
+  }));
+
+  const createdIds = new Set(createdItems.map((t) => t.id));
+  store.transactions = [...createdItems, ...store.transactions.filter((t) => !createdIds.has(t.id))];
+  writeStore(store);
+
+  broadcast({
+    type: "TRANSACTIONS_BATCH_CREATED",
+    data: createdItems,
+  });
+
+  res.status(201).json(createdItems);
+});
+
+// Batch update transactions
+app.put("/api/transactions/batch", (req, res) => {
+  const { ids, updates } = req.body;
+  if (!Array.isArray(ids) || ids.length === 0 || !updates) {
+    return res.status(400).json({ error: "Parâmetros de atualização em lote inválidos." });
+  }
+
+  const store = readStore();
+  const idSet = new Set(ids);
+  const updatedList: any[] = [];
+
+  store.transactions = store.transactions.map((t) => {
+    if (idSet.has(t.id)) {
+      const updated = { ...t, ...updates };
+      updatedList.push(updated);
+      return updated;
+    }
+    return t;
+  });
+
+  writeStore(store);
+
+  broadcast({
+    type: "TRANSACTIONS_BATCH_UPDATED",
+    data: updatedList,
+  });
+
+  res.json(updatedList);
+});
+
 // Update transaction (broadcasts to all users)
 app.put("/api/transactions/:id", (req, res) => {
   const { id } = req.params;
