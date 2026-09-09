@@ -15,16 +15,21 @@ import {
   DEFAULT_ACCOUNTS,
 } from '../data/defaultData';
 import { getCurrentYearMonth, formatCurrency, formatDate } from '../utils/formatters';
+import { supabase } from '../utils/supabase/client';
 import {
   checkSupabaseTables,
   fetchSupabaseTransactions,
+  fetchSupabaseBudgets,
+  fetchSupabaseGoals,
   upsertSupabaseTransaction,
+  upsertSupabaseTransactionsBatch,
   deleteSupabaseTransaction,
   upsertSupabaseBudget,
   deleteSupabaseBudget,
   upsertSupabaseGoal,
   deleteSupabaseGoal,
   syncAllDataToSupabase,
+  mapRowToTransaction,
   SupabaseSyncState,
 } from '../services/supabaseService';
 
@@ -113,7 +118,7 @@ export function useFinanceData() {
     }
   }, []);
 
-  // Initialize data and real-time WebSocket connection
+  // Initialize data from Supabase and subscribe to real-time events
   useEffect(() => {
     // 1. Initial local cache check for zero-latency paint
     try {
@@ -130,10 +135,123 @@ export function useFinanceData() {
       console.error('Failed to load local finance data', e);
     }
 
-    // 2. Fetch authoritative server data
-    fetchServerData(true);
+    // 2. Fetch authoritative data from Supabase (primary cloud database)
+    const loadFromSupabase = async () => {
+      try {
+        const [sbTxs, sbBudgets, sbGoals] = await Promise.all([
+          fetchSupabaseTransactions(),
+          fetchSupabaseBudgets(),
+          fetchSupabaseGoals(),
+        ]);
 
-    // 3. Connect to WebSocket for instant real-time broadcasts
+        if (sbTxs !== null) {
+          setSupabaseSync({
+            status: 'connected',
+            message: 'Conectado ao Supabase (Tempo Real Ativo)',
+            lastSyncedAt: new Date().toISOString(),
+          });
+
+          if (sbTxs.length > 0) {
+            setTransactions(sbTxs);
+          } else {
+            // First time migration: if Supabase table is empty, auto-seed local/default data
+            const saved = localStorage.getItem(STORAGE_KEY);
+            let toSeed = DEFAULT_TRANSACTIONS;
+            if (saved) {
+              try {
+                const parsed: StoredData = JSON.parse(saved);
+                if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
+                  toSeed = parsed.transactions;
+                }
+              } catch (e) {
+                console.warn(e);
+              }
+            }
+            setTransactions(toSeed);
+            upsertSupabaseTransactionsBatch(toSeed).catch(console.warn);
+          }
+
+          if (sbBudgets && sbBudgets.length > 0) setBudgets(sbBudgets);
+          if (sbGoals && sbGoals.length > 0) setGoals(sbGoals);
+
+          setIsLoaded(true);
+          return true;
+        }
+      } catch (err) {
+        console.warn('[Supabase Init] Erro ao carregar dados do Supabase:', err);
+      }
+      return false;
+    };
+
+    loadFromSupabase().then((ok) => {
+      if (!ok) {
+        // Fallback to local server if Supabase is offline or tables missing
+        fetchServerData(true);
+      }
+    });
+
+    // 3. Connect to Supabase Realtime channel for instant multi-user synchronization
+    const supabaseChannel = supabase
+      .channel('supabase-realtime-all')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'transactions' },
+        (payload: any) => {
+          console.log('[Supabase Realtime] Transações alteradas:', payload);
+          if (payload.eventType === 'INSERT' && payload.new) {
+            const newTx = mapRowToTransaction(payload.new);
+            setTransactions((prev) => {
+              if (prev.some((t) => t.id === newTx.id)) {
+                return prev.map((t) => (t.id === newTx.id ? newTx : t));
+              }
+              return [newTx, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE' && payload.new) {
+            const updatedTx = mapRowToTransaction(payload.new);
+            setTransactions((prev) =>
+              prev.map((t) => (t.id === updatedTx.id ? updatedTx : t))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setTransactions((prev) => prev.filter((t) => t.id !== deletedId));
+            } else {
+              fetchSupabaseTransactions().then((txs) => {
+                if (txs) setTransactions(txs);
+              });
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'budgets' },
+        async () => {
+          const bList = await fetchSupabaseBudgets();
+          if (bList) setBudgets(bList);
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'goals' },
+        async () => {
+          const gList = await fetchSupabaseGoals();
+          if (gList) setGoals(gList);
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setLiveStatus('connected');
+          setSupabaseSync((prev) => ({
+            ...prev,
+            status: 'connected',
+            message: 'Supabase Conectado em Tempo Real',
+            lastSyncedAt: new Date().toISOString(),
+          }));
+        }
+      });
+
+    // 4. Also keep WebSocket connection to local server for backwards compatibility
     let ws: WebSocket | null = null;
     let pingInterval: any = null;
     let reconnectTimeout: any = null;
@@ -147,7 +265,6 @@ export function useFinanceData() {
         ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-          setLiveStatus('connected');
           clearInterval(pingInterval);
           pingInterval = setInterval(() => {
             if (ws && ws.readyState === WebSocket.OPEN) {
@@ -159,72 +276,7 @@ export function useFinanceData() {
         ws.onmessage = (event) => {
           try {
             const msg = JSON.parse(event.data);
-            if (msg.type === 'INIT_DATA' && msg.data) {
-              if (Array.isArray(msg.data.transactions)) {
-                setTransactions(msg.data.transactions);
-              }
-              if (Array.isArray(msg.data.budgets)) setBudgets(msg.data.budgets);
-              if (Array.isArray(msg.data.goals)) setGoals(msg.data.goals);
-              if (Array.isArray(msg.data.accounts) && msg.data.accounts.length > 0) setAccounts(msg.data.accounts);
-              if (Array.isArray(msg.data.categories) && msg.data.categories.length > 0) setCategories(msg.data.categories);
-            } else if (msg.type === 'TRANSACTION_CREATED' && msg.data) {
-              const newTx = msg.data;
-              setTransactions((prev) => {
-                // Prevent duplicate if already added optimistically
-                if (prev.some((t) => t.id === newTx.id)) return prev;
-                return [newTx, ...prev];
-              });
-            } else if (msg.type === 'TRANSACTIONS_BATCH_CREATED' && Array.isArray(msg.data)) {
-              const newTxs = msg.data;
-              setTransactions((prev) => {
-                const existing = new Set(prev.map((t) => t.id));
-                const filtered = newTxs.filter((t: any) => !existing.has(t.id));
-                return [...filtered, ...prev];
-              });
-            } else if (msg.type === 'TRANSACTION_UPDATED' && msg.data) {
-              const updated = msg.data;
-              setTransactions((prev) =>
-                prev.map((t) => (t.id === updated.id ? { ...t, ...updated } : t))
-              );
-            } else if (msg.type === 'TRANSACTIONS_BATCH_UPDATED' && Array.isArray(msg.data)) {
-              const updatedList = msg.data;
-              const map = new Map<string, any>(updatedList.map((t: any) => [t.id, t]));
-              setTransactions((prev) =>
-                prev.map((t) => {
-                  const item = map.get(t.id);
-                  return item ? { ...t, ...item } : t;
-                })
-              );
-            } else if (msg.type === 'TRANSACTION_DELETED' && msg.data) {
-              const { id } = msg.data;
-              setTransactions((prev) => prev.filter((t) => t.id !== id));
-            } else if (msg.type === 'BUDGET_SAVED' && msg.data) {
-              const b = msg.data;
-              setBudgets((prev) => {
-                const idx = prev.findIndex((item) => item.id === b.id || item.categoryId === b.categoryId);
-                if (idx >= 0) {
-                  const copy = [...prev];
-                  copy[idx] = b;
-                  return copy;
-                }
-                return [...prev, b];
-              });
-            } else if (msg.type === 'BUDGET_DELETED' && msg.data) {
-              setBudgets((prev) => prev.filter((item) => item.id !== msg.data.id));
-            } else if (msg.type === 'GOAL_SAVED' && msg.data) {
-              const g = msg.data;
-              setGoals((prev) => {
-                const idx = prev.findIndex((item) => item.id === g.id);
-                if (idx >= 0) {
-                  const copy = [...prev];
-                  copy[idx] = g;
-                  return copy;
-                }
-                return [...prev, g];
-              });
-            } else if (msg.type === 'GOAL_DELETED' && msg.data) {
-              setGoals((prev) => prev.filter((item) => item.id !== msg.data.id));
-            } else if (msg.type === 'FULL_SYNC' && msg.data) {
+            if (msg.type === 'FULL_SYNC' && msg.data) {
               if (Array.isArray(msg.data.transactions)) setTransactions(msg.data.transactions);
               if (Array.isArray(msg.data.budgets)) setBudgets(msg.data.budgets);
               if (Array.isArray(msg.data.goals)) setGoals(msg.data.goals);
@@ -237,8 +289,7 @@ export function useFinanceData() {
         ws.onclose = () => {
           clearInterval(pingInterval);
           if (!isCleanedUp) {
-            setLiveStatus('connecting');
-            reconnectTimeout = setTimeout(connectWebSocket, 2000);
+            reconnectTimeout = setTimeout(connectWebSocket, 4000);
           }
         };
 
@@ -247,17 +298,27 @@ export function useFinanceData() {
         };
       } catch {
         if (!isCleanedUp) {
-          reconnectTimeout = setTimeout(connectWebSocket, 3000);
+          reconnectTimeout = setTimeout(connectWebSocket, 4000);
         }
       }
     };
 
     connectWebSocket();
 
-    // 4. Background refresh when tab gains focus or every 8s
+    // 5. Background refresh when tab gains focus or every 8s
+    const refreshAllData = async () => {
+      const txs = await fetchSupabaseTransactions();
+      if (txs) setTransactions(txs);
+      const bList = await fetchSupabaseBudgets();
+      if (bList) setBudgets(bList);
+      const gList = await fetchSupabaseGoals();
+      if (gList) setGoals(gList);
+      fetchServerData();
+    };
+
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        fetchServerData();
+        refreshAllData();
       }
     };
 
@@ -266,7 +327,7 @@ export function useFinanceData() {
 
     const pollTimer = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        fetchServerData();
+        refreshAllData();
       }
     }, 8000);
 
@@ -278,6 +339,7 @@ export function useFinanceData() {
       window.removeEventListener('visibilitychange', handleVisibility);
       window.removeEventListener('focus', handleVisibility);
       if (ws) ws.close();
+      supabase.removeChannel(supabaseChannel);
     };
   }, [fetchServerData]);
 
@@ -602,9 +664,9 @@ export function useFinanceData() {
       console.warn('[Sync] Erro ao sincronizar lote de transações:', err);
     });
 
-    // 3. Supabase sync
-    createdItems.forEach((tx) => {
-      upsertSupabaseTransaction(tx).catch(console.warn);
+    // 3. Supabase batch sync
+    upsertSupabaseTransactionsBatch(createdItems).catch((err) => {
+      console.warn('[Supabase] Erro ao sincronizar lote:', err);
     });
 
     return createdItems;
@@ -682,9 +744,9 @@ export function useFinanceData() {
         }),
       }).catch(console.warn);
 
-      // Supabase sync
+      // Supabase batch sync
       const affectedTxs = updatedList.filter((t) => affectedIds.includes(t.id));
-      affectedTxs.forEach((tx) => upsertSupabaseTransaction(tx).catch(console.warn));
+      upsertSupabaseTransactionsBatch(affectedTxs).catch(console.warn);
 
       return updatedList;
     });
@@ -731,13 +793,14 @@ export function useFinanceData() {
       });
 
       const affectedTxs = updatedList.filter((t) => affectedIds.includes(t.id));
+      upsertSupabaseTransactionsBatch(affectedTxs).catch(console.warn);
+
       affectedTxs.forEach((tx) => {
         fetch(`/api/transactions/${tx.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(tx),
         }).catch(console.warn);
-        upsertSupabaseTransaction(tx).catch(console.warn);
       });
 
       return updatedList;

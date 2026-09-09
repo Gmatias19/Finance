@@ -218,6 +218,28 @@ export async function checkSupabaseTables(): Promise<{
   }
 }
 
+export function mapRowToTransaction(row: any): Transaction {
+  return {
+    id: row.id,
+    description: row.description,
+    amount: Number(row.amount),
+    type: row.type,
+    categoryId: row.category_id || row.categoryId,
+    date: row.date,
+    paymentMethod: row.payment_method || row.paymentMethod,
+    account: row.account,
+    status: row.status || 'completed',
+    isRecurring: !!row.is_recurring,
+    recurringGroupId: row.recurring_group_id || undefined,
+    isInstallment: !!row.is_installment,
+    installmentGroupId: row.installment_group_id || undefined,
+    installmentNumber: row.installment_number || undefined,
+    installmentTotal: row.installment_total || undefined,
+    notes: row.notes || undefined,
+    createdAt: row.created_at || row.createdAt || new Date().toISOString(),
+  };
+}
+
 /**
  * Load all transactions from Supabase
  */
@@ -235,28 +257,47 @@ export async function fetchSupabaseTransactions(): Promise<Transaction[] | null>
 
     if (!data) return [];
 
-    return data.map((row: any) => ({
-      id: row.id,
-      description: row.description,
-      amount: Number(row.amount),
-      type: row.type,
-      categoryId: row.category_id || row.categoryId,
-      date: row.date,
-      paymentMethod: row.payment_method || row.paymentMethod,
-      account: row.account,
-      status: row.status || 'completed',
-      isRecurring: !!row.is_recurring,
-      recurringGroupId: row.recurring_group_id || undefined,
-      isInstallment: !!row.is_installment,
-      installmentGroupId: row.installment_group_id || undefined,
-      installmentNumber: row.installment_number || undefined,
-      installmentTotal: row.installment_total || undefined,
-      notes: row.notes || undefined,
-      createdAt: row.created_at || row.createdAt || new Date().toISOString(),
-    }));
+    return data.map(mapRowToTransaction);
   } catch (e) {
     console.warn('[Supabase] Erro de rede ao buscar transações:', e);
     return null;
+  }
+}
+
+/**
+ * Insert or update batch of transactions in Supabase
+ */
+export async function upsertSupabaseTransactionsBatch(txs: Transaction[]): Promise<boolean> {
+  try {
+    const rows = txs.map((tx) => ({
+      id: tx.id,
+      description: tx.description,
+      amount: tx.amount,
+      type: tx.type,
+      category_id: tx.categoryId,
+      date: tx.date,
+      payment_method: tx.paymentMethod,
+      account: tx.account,
+      status: tx.status,
+      is_recurring: !!tx.isRecurring,
+      recurring_group_id: tx.recurringGroupId || null,
+      is_installment: !!tx.isInstallment,
+      installment_group_id: tx.installmentGroupId || null,
+      installment_number: tx.installmentNumber || null,
+      installment_total: tx.installmentTotal || null,
+      notes: tx.notes || null,
+      created_at: tx.createdAt || new Date().toISOString(),
+    }));
+
+    const { error } = await supabase.from('transactions').upsert(rows);
+    if (error) {
+      console.warn('[Supabase] Falha ao salvar lote de transações:', error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn('[Supabase] Erro ao sincronizar lote de transações:', err);
+    return false;
   }
 }
 
@@ -311,6 +352,56 @@ export async function deleteSupabaseTransaction(id: string): Promise<boolean> {
   } catch (err) {
     console.warn('[Supabase] Erro ao excluir transação:', err);
     return false;
+  }
+}
+
+/**
+ * Fetch all budgets from Supabase
+ */
+export async function fetchSupabaseBudgets(): Promise<Budget[] | null> {
+  try {
+    const { data, error } = await supabase.from('budgets').select('*');
+    if (error) {
+      console.warn('[Supabase] Falha ao carregar orçamentos:', error.message);
+      return null;
+    }
+    if (!data) return [];
+    return data.map((b: any) => ({
+      id: b.id,
+      categoryId: b.category_id || b.categoryId,
+      monthlyLimit: Number(b.monthly_limit || b.monthlyLimit),
+      period: b.period || 'general',
+    }));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fetch all goals from Supabase
+ */
+export async function fetchSupabaseGoals(): Promise<FinancialGoal[] | null> {
+  try {
+    const { data, error } = await supabase.from('goals').select('*');
+    if (error) {
+      console.warn('[Supabase] Falha ao carregar metas:', error.message);
+      return null;
+    }
+    if (!data) return [];
+    return data.map((g: any) => ({
+      id: g.id,
+      title: g.title,
+      targetAmount: Number(g.target_amount || g.targetAmount),
+      currentAmount: Number(g.current_amount || g.currentAmount),
+      targetDate: g.target_date || g.targetDate,
+      category: g.category,
+      icon: g.icon || undefined,
+      color: g.color || undefined,
+      notes: g.notes || undefined,
+      completed: !!g.completed,
+    }));
+  } catch {
+    return null;
   }
 }
 
