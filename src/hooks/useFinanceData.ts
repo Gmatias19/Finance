@@ -14,7 +14,7 @@ import {
   DEFAULT_GOALS,
   DEFAULT_ACCOUNTS,
 } from '../data/defaultData';
-import { getCurrentYearMonth, formatCurrency, formatDate } from '../utils/formatters';
+import { getCurrentYearMonth, formatCurrency, formatDate, getTodayString, getAdjacentMonth } from '../utils/formatters';
 import { supabase } from '../utils/supabase/client';
 import {
   checkSupabaseTables,
@@ -445,46 +445,51 @@ export function useFinanceData() {
     return map;
   }, [categories]);
 
-  // Current month's transactions (for summary metrics)
+  // Current month's transactions with overdue pending debts rolled over from previous months
   const currentMonthTransactions = useMemo(() => {
     if (filters.month === 'all') return transactions;
-    return transactions.filter((t) => t.date.startsWith(filters.month));
-  }, [transactions, filters.month]);
 
-  // Financial summary for selected month
-  const summary = useMemo(() => {
-    let income = 0;
-    let expense = 0;
-    let pendingIncome = 0;
-    let pendingExpense = 0;
+    const targetMonth = filters.month;
+    const todayStr = getTodayString();
+    const currentYM = getCurrentYearMonth();
 
-    currentMonthTransactions.forEach((t) => {
-      if (t.type === 'income') {
-        if (t.status === 'completed') income += t.amount;
-        else pendingIncome += t.amount;
-      } else {
-        if (t.status === 'completed') expense += t.amount;
-        else pendingExpense += t.amount;
+    // 1. Transactions directly belonging to the target month
+    const directTransactions = transactions.filter((t) => t.date.startsWith(targetMonth));
+
+    // 2. Overdue pending debts from previous months that roll over into targetMonth:
+    // Criteria:
+    // - status === 'pending'
+    // - type === 'expense' (debts/despesas)
+    // - date < todayStr (already overdue compared to current date)
+    // - date month < targetMonth (originated in an earlier month)
+    // - and: either targetMonth is the immediate next month of the debt, OR targetMonth is the current active month (or beyond) where the debt is still pending!
+    const carriedOverDebts: Transaction[] = [];
+
+    transactions.forEach((t) => {
+      if (t.type === 'expense' && t.status === 'pending') {
+        const origMonth = t.date.substring(0, 7);
+        if (t.date < todayStr && origMonth < targetMonth) {
+          const nextMonth = getAdjacentMonth(origMonth, 1);
+          // Condition: targetMonth is the immediately next month OR (targetMonth === currentYM and origMonth < currentYM)
+          if (targetMonth === nextMonth || (targetMonth === currentYM && origMonth < currentYM)) {
+            // Avoid duplicate entries
+            if (!directTransactions.some((dt) => dt.id === t.id)) {
+              carriedOverDebts.push({
+                ...t,
+                isCarriedOver: true,
+                originalDueDate: t.date,
+                carriedOverFromMonth: origMonth,
+              });
+            }
+          }
+        }
       }
     });
 
-    const netBalance = income - expense;
-    const projectedBalance = (income + pendingIncome) - (expense + pendingExpense);
-    const savingsRate = income > 0 ? Math.max(0, ((income - expense) / income) * 100) : 0;
+    return [...directTransactions, ...carriedOverDebts];
+  }, [transactions, filters.month]);
 
-    return {
-      income,
-      expense,
-      pendingIncome,
-      pendingExpense,
-      netBalance,
-      projectedBalance,
-      savingsRate,
-      transactionCount: currentMonthTransactions.length,
-    };
-  }, [currentMonthTransactions]);
-
-  // Overall all-time balance
+  // Overall all-time balance of completed transactions
   const allTimeBalance = useMemo(() => {
     return transactions.reduce((acc, t) => {
       if (t.status === 'completed') {
@@ -494,13 +499,74 @@ export function useFinanceData() {
     }, 0);
   }, [transactions]);
 
-  // Filtered transactions for list view
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((t) => {
-      // Month filter
-      if (filters.month !== 'all' && !t.date.startsWith(filters.month)) {
-        return false;
+  // Financial summary for selected month with cumulative balance across months
+  const summary = useMemo(() => {
+    let income = 0;
+    let expense = 0;
+    let pendingIncome = 0;
+    let pendingExpense = 0;
+    let carriedOverPendingExpense = 0;
+
+    currentMonthTransactions.forEach((t) => {
+      if (t.type === 'income') {
+        if (t.status === 'completed') income += t.amount;
+        else pendingIncome += t.amount;
+      } else {
+        if (t.status === 'completed') {
+          expense += t.amount;
+        } else {
+          pendingExpense += t.amount;
+          if (t.isCarriedOver) {
+            carriedOverPendingExpense += t.amount;
+          }
+        }
       }
+    });
+
+    // Monthly operational result (Receitas do mês - Despesas do mês)
+    const monthlyResult = income - expense;
+
+    // Previous accumulated balance: all completed transactions prior to the selected month
+    let previousBalance = 0;
+    if (filters.month !== 'all') {
+      const startOfMonthDate = `${filters.month}-01`;
+      transactions.forEach((t) => {
+        if (t.status === 'completed' && t.date < startOfMonthDate) {
+          if (t.type === 'income') previousBalance += t.amount;
+          else previousBalance -= t.amount;
+        }
+      });
+    }
+
+    // Cumulative balance for this month = previous accumulated balance + this month's operational result
+    const accumulatedBalance = filters.month === 'all' 
+      ? allTimeBalance 
+      : previousBalance + monthlyResult;
+
+    // Projected balance: cumulative balance + pending income - pending expenses (including carried-over debts)
+    const projectedBalance = accumulatedBalance + pendingIncome - pendingExpense;
+
+    const savingsRate = income > 0 ? Math.max(0, ((income - expense) / income) * 100) : 0;
+
+    return {
+      income,
+      expense,
+      pendingIncome,
+      pendingExpense,
+      carriedOverPendingExpense,
+      monthlyResult,
+      previousBalance,
+      accumulatedBalance,
+      netBalance: accumulatedBalance, // Backwards compatible with existing consumers of netBalance
+      projectedBalance,
+      savingsRate,
+      transactionCount: currentMonthTransactions.length,
+    };
+  }, [currentMonthTransactions, transactions, filters.month, allTimeBalance]);
+
+  // Filtered transactions for list view (scoped by currentMonthTransactions, with search/type/cat/status filters)
+  const filteredTransactions = useMemo(() => {
+    return currentMonthTransactions.filter((t) => {
       // Type filter
       if (filters.type !== 'all' && t.type !== filters.type) {
         return false;
@@ -544,7 +610,7 @@ export function useFinanceData() {
       }
       return 0;
     });
-  }, [transactions, filters, categoryMap]);
+  }, [currentMonthTransactions, filters, categoryMap]);
 
   // Expenses grouped by category (for pie chart and budget analysis)
   const categoryExpenses = useMemo(() => {
@@ -569,13 +635,19 @@ export function useFinanceData() {
       .sort((a, b) => b.amount - a.amount);
   }, [currentMonthTransactions, categoryMap, summary.expense]);
 
-  // Monthly flow data for 6 recent months
+  // Monthly flow data for recent months with cumulative balance across months
   const monthlyTrends = useMemo(() => {
-    const months: string[] = Array.from(
-      new Set<string>(transactions.map((t) => t.date.substring(0, 7)))
-    ).sort().slice(-6);
+    // 1. Gather all unique months chronologically
+    const monthsSet = new Set<string>();
+    transactions.forEach((t) => {
+      if (t.date) monthsSet.add(t.date.substring(0, 7));
+    });
+    monthsSet.add(getCurrentYearMonth());
+    const allMonths = Array.from(monthsSet).sort();
 
-    return months.map((m: string) => {
+    // 2. Accumulate running balance sequentially month by month
+    let runningBalance = 0;
+    const allMonthlyData = allMonths.map((m: string) => {
       let income = 0;
       let expense = 0;
       transactions.forEach((t) => {
@@ -584,6 +656,8 @@ export function useFinanceData() {
           else expense += t.amount;
         }
       });
+      const monthlyNet = income - expense;
+      runningBalance += monthlyNet; // Cumulative balance carrying forward across months!
       const [year, month] = m.split('-');
       const label = `${month}/${year.slice(-2)}`;
       return {
@@ -591,9 +665,14 @@ export function useFinanceData() {
         label,
         Receitas: income,
         Despesas: expense,
-        Saldo: income - expense,
+        Resultado: monthlyNet,
+        Saldo: runningBalance, // Cumulative balance!
+        SaldoAcumulado: runningBalance,
       };
     });
+
+    // Return the 6 most recent months for compact display
+    return allMonthlyData.slice(-6);
   }, [transactions]);
 
   // Budgets health calculation

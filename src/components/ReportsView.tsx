@@ -212,10 +212,10 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
       <div className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs">
         <div className="mb-4">
           <h2 className="text-base font-bold text-white">
-            Tendência do Saldo Mensal
+            Evolução do Saldo Acumulado
           </h2>
           <p className="text-xs text-slate-400">
-            Histórico da evolução do saldo gerado mês a mês
+            Histórico da evolução do saldo acumulado mês a mês
           </p>
         </div>
         <div className="h-64 w-full">
@@ -235,7 +235,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
                 tickFormatter={(v) => `R$${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
-                formatter={(val: number) => [formatCurrency(val), 'Saldo Líquido']}
+                formatter={(val: number) => [formatCurrency(val), 'Saldo Acumulado']}
                 contentStyle={{
                   backgroundColor: '#0f172a',
                   borderColor: '#334155',

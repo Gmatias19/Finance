@@ -14,6 +14,7 @@ import {
   X,
   Check,
   AlertCircle,
+  AlertTriangle,
   Calendar,
 } from 'lucide-react';
 import { Transaction, Category, FilterOptions } from '../types';
@@ -49,14 +50,23 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
 
   // Month-scoped transactions for badge counting
   const monthScopedTransactions = useMemo(() => {
-    const list = allTransactions.length > 0 ? allTransactions : transactions;
+    const list = allTransactions && allTransactions.length > 0 ? allTransactions : transactions;
     return list.filter((t) => {
-      if (filters.month !== 'all' && !t.date.startsWith(filters.month)) {
+      if (filters.month !== 'all' && !t.date.startsWith(filters.month) && !t.isCarriedOver) {
         return false;
       }
       return true;
     });
   }, [allTransactions, transactions, filters.month]);
+
+  // Carried-over overdue pending debts
+  const carriedOverDebts = useMemo(() => {
+    return transactions.filter((t) => t.isCarriedOver);
+  }, [transactions]);
+  const carriedOverCount = carriedOverDebts.length;
+  const carriedOverTotal = useMemo(() => {
+    return carriedOverDebts.reduce((sum, t) => sum + t.amount, 0);
+  }, [carriedOverDebts]);
 
   // Counts for the tabs
   const completedCount = useMemo(() => {
@@ -466,6 +476,21 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
         </div>
       )}
 
+      {/* Special contextual helper for Carried Over Debts */}
+      {carriedOverCount > 0 && (
+        <div id="banner-carried-over" className="p-3.5 bg-amber-950/30 border border-amber-800/70 rounded-xl flex items-center justify-between gap-3 text-xs text-amber-200 shadow-xs">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <AlertTriangle size={18} className="text-amber-400 shrink-0" />
+            <span className="truncate sm:text-clip">
+              <strong>{carriedOverCount} pendência(s) do mês anterior</strong> vencida(s) foram trazidas para este mês mantendo suas informações originais.
+            </span>
+          </div>
+          <span className="font-bold shrink-0 text-amber-300 bg-amber-900/60 px-2 py-1 rounded-md border border-amber-700/60">
+            Total: {formatCurrency(carriedOverTotal)}
+          </span>
+        </div>
+      )}
+
       {/* Transactions Table / List */}
       <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-xs overflow-hidden">
         {transactions.length > 0 ? (
@@ -479,7 +504,9 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                 <div
                   key={tx.id}
                   id={`transaction-${tx.id}`}
-                  className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/50 transition-colors"
+                  className={`p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-800/50 transition-colors ${
+                    tx.isCarriedOver ? 'border-l-4 border-l-amber-500 bg-amber-950/15' : ''
+                  }`}
                 >
                   {/* Left: Icon, Description, Category, Date, Account */}
                   <div className="flex items-start sm:items-center gap-3.5 min-w-0">
@@ -499,6 +526,11 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                         <span className="font-bold text-white text-sm sm:text-base truncate">
                           {tx.description}
                         </span>
+                        {tx.isCarriedOver && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-950/90 text-amber-300 border border-amber-800/90 px-2 py-0.5 rounded shadow-xs">
+                            <AlertTriangle size={10} className="text-amber-400" /> Dívida vencida do mês anterior
+                          </span>
+                        )}
                         {tx.isRecurring && (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded">
                             <Repeat size={10} /> Fixo
@@ -516,7 +548,9 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                           {cat?.name || 'Geral'}
                         </span>
                         <span>•</span>
-                        <span>Vencimento: {formatDate(tx.date)}</span>
+                        <span className={tx.isCarriedOver ? 'text-amber-300 font-semibold' : ''}>
+                          {tx.isCarriedOver ? 'Vencimento original' : 'Vencimento'}: {formatDate(tx.date)}
+                        </span>
                         <span>•</span>
                         <span className="text-slate-400">
                           {paymentMethodLabels[tx.paymentMethod] || tx.paymentMethod}

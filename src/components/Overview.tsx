@@ -34,6 +34,10 @@ interface OverviewProps {
     expense: number;
     pendingIncome: number;
     pendingExpense: number;
+    carriedOverPendingExpense?: number;
+    monthlyResult?: number;
+    previousBalance?: number;
+    accumulatedBalance?: number;
     netBalance: number;
     projectedBalance: number;
     savingsRate: number;
@@ -145,11 +149,11 @@ export const Overview: React.FC<OverviewProps> = ({
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Card 1: Saldo Geral */}
+        {/* Card 1: Saldo Acumulado */}
         <div id="card-saldo-geral" className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Saldo Líquido Mensal
+              {selectedMonth === 'all' ? 'Saldo Total Geral' : 'Saldo Acumulado'}
             </span>
             <div className="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center text-slate-300">
               <Wallet size={18} />
@@ -164,9 +168,31 @@ export const Overview: React.FC<OverviewProps> = ({
               {formatCurrency(summary.netBalance)}
             </span>
           </div>
-          <div className="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-            <span>Acumulado histórico:</span>
-            <span className="font-semibold text-slate-200">{formatCurrency(allTimeBalance)}</span>
+          <div className="mt-2 text-xs text-slate-400 flex items-center justify-between flex-wrap gap-1">
+            {selectedMonth !== 'all' ? (
+              <>
+                <span title="Resultado operacional das entradas e saídas deste mês">
+                  No mês:{' '}
+                  <span className={`font-semibold ${(summary.monthlyResult ?? (summary.income - summary.expense)) >= 0 ? 'text-sky-400' : 'text-rose-400'}`}>
+                    {(summary.monthlyResult ?? (summary.income - summary.expense)) >= 0 ? '+' : ''}
+                    {formatCurrency(summary.monthlyResult ?? (summary.income - summary.expense))}
+                  </span>
+                </span>
+                {(summary.previousBalance ?? 0) !== 0 && (
+                  <span title="Saldo acumulado dos meses anteriores">
+                    Anterior:{' '}
+                    <span className="font-semibold text-slate-200">
+                      {formatCurrency(summary.previousBalance ?? 0)}
+                    </span>
+                  </span>
+                )}
+              </>
+            ) : (
+              <>
+                <span>Acumulado histórico:</span>
+                <span className="font-semibold text-slate-200">{formatCurrency(allTimeBalance)}</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -247,6 +273,11 @@ export const Overview: React.FC<OverviewProps> = ({
               <span className="text-amber-400 flex items-center gap-1">
                 <Clock size={12} />
                 {formatCurrency(summary.pendingExpense)} pendente
+                {(summary.carriedOverPendingExpense ?? 0) > 0 && (
+                  <span className="text-[11px] text-amber-300/90 font-medium ml-1">
+                    ({formatCurrency(summary.carriedOverPendingExpense ?? 0)} vencida anterior)
+                  </span>
+                )}
               </span>
             ) : (
               <span className="text-slate-400 font-medium">Nenhuma pendente</span>
@@ -278,6 +309,41 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Overdue Carried Over Debts Warning Banner */}
+      {(summary.carriedOverPendingExpense ?? 0) > 0 && (
+        <div
+          id="alert-carried-over-debts"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTab('transactions', 'expense')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') onNavigateTab('transactions', 'expense');
+          }}
+          className="bg-amber-950/40 border border-amber-800/80 hover:border-amber-600/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-amber-200 transition-all cursor-pointer group shadow-xs"
+          title="Clique para ver os lançamentos com pendências vencidas"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-900/60 border border-amber-700/60 flex items-center justify-center text-amber-300 shrink-0">
+              <AlertTriangle size={20} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-amber-200 flex items-center gap-2">
+                <span>Pendências vencidas acumuladas do mês anterior</span>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/80 text-amber-300 border border-amber-700 font-semibold">
+                  {formatCurrency(summary.carriedOverPendingExpense ?? 0)}
+                </span>
+              </p>
+              <p className="text-xs text-amber-300/80 mt-0.5">
+                Você possui despesas do mês anterior já vencidas que continuam pendentes. Elas foram trazidas para este mês para manter todas as informações originais e o balanço acumulado preciso.
+              </p>
+            </div>
+          </div>
+          <span className="text-xs font-semibold text-amber-300 group-hover:text-amber-200 shrink-0 flex items-center gap-1">
+            Ver despesas <ChevronRight size={14} />
+          </span>
+        </div>
+      )}
 
       {/* Critical Budget Warnings Banner */}
       {criticalBudgets.length > 0 && (
@@ -537,15 +603,20 @@ export const Overview: React.FC<OverviewProps> = ({
                         <span className="font-semibold text-sm text-white block truncate">
                           {tx.description}
                         </span>
-                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
+                        <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5 flex-wrap">
                           <span>{cat?.name || 'Geral'}</span>
                           <span>•</span>
                           <span>Vencimento: {formatDate(tx.date)}</span>
-                          {tx.status === 'pending' && (
-                            <span className="text-amber-300 font-medium bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.2 rounded text-[10px]">
+                          {tx.isCarriedOver ? (
+                            <span className="text-amber-300 font-semibold bg-amber-950/90 border border-amber-800/80 px-1.5 py-0.5 rounded text-[10px] flex items-center gap-1">
+                              <AlertTriangle size={10} className="text-amber-400" />
+                              Vencida do mês anterior
+                            </span>
+                          ) : tx.status === 'pending' ? (
+                            <span className="text-amber-300 font-medium bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.5 rounded text-[10px]">
                               {isIncome ? 'A Receber' : 'Pendente'}
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>

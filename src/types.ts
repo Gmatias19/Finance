@@ -36,6 +36,9 @@ export interface Transaction {
   installmentTotal?: number;
   notes?: string;
   createdAt: string;
+  isCarriedOver?: boolean;
+  originalDueDate?: string;
+  carriedOverFromMonth?: string;
 }
 
 export interface Budget {
