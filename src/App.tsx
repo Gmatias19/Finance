@@ -10,8 +10,12 @@ import { ReportsView } from './components/ReportsView';
 import { TransactionModal } from './components/TransactionModal';
 import { ExportImportModal } from './components/ExportImportModal';
 import { SupabaseSyncModal } from './components/SupabaseSyncModal';
+import { AuthLockScreen } from './components/AuthLockScreen';
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem('finance_authenticated') === 'true';
+  });
   const {
     isLoaded,
     transactions,
@@ -79,6 +83,20 @@ export default function App() {
     }
   };
 
+  const handleUnlock = () => {
+    sessionStorage.setItem('finance_authenticated', 'true');
+    setIsAuthenticated(true);
+  };
+
+  const handleLock = () => {
+    sessionStorage.removeItem('finance_authenticated');
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <AuthLockScreen onUnlock={handleUnlock} />;
+  }
+
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
@@ -103,6 +121,7 @@ export default function App() {
         onOpenExportImport={() => setIsExportImportModalOpen(true)}
         supabaseSync={supabaseSync}
         onOpenSupabaseSync={() => setIsSupabaseModalOpen(true)}
+        onLock={handleLock}
       />
 
       {/* Main View Area */}

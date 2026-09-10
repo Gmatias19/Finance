@@ -9,6 +9,7 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Lock,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { formatMonthYear, formatShortMonth, getAdjacentMonth } from '../utils/formatters';
@@ -24,6 +25,7 @@ interface NavbarProps {
   onOpenExportImport?: () => void;
   supabaseSync?: SupabaseSyncState;
   onOpenSupabaseSync?: () => void;
+  onLock?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,6 +34,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   selectedMonth,
   setSelectedMonth,
   availableMonths,
+  onLock,
 }) => {
   const navItems: { id: ActiveTab; label: string; icon: React.ReactNode }[] = [
     { id: 'overview', label: 'Visão Geral', icon: <LayoutDashboard size={18} /> },
@@ -130,6 +133,21 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <ChevronRight size={16} />
                 </button>
               </div>
+
+              {/* Lock Button */}
+              {onLock && (
+                <button
+                  type="button"
+                  id="btn-lock-screen"
+                  onClick={onLock}
+                  title="Bloquear painel"
+                  aria-label="Bloquear painel"
+                  className="p-1.5 sm:px-2.5 sm:py-2 flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-rose-300 bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-rose-900/60 rounded-xl transition-colors cursor-pointer shadow-xs"
+                >
+                  <Lock size={15} />
+                  <span className="hidden sm:inline">Bloquear</span>
+                </button>
+              )}
             </div>
           </div>
 
