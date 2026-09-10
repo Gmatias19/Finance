@@ -310,41 +310,6 @@ export const Overview: React.FC<OverviewProps> = ({
         </div>
       </div>
 
-      {/* Overdue Carried Over Debts Warning Banner */}
-      {(summary.carriedOverPendingExpense ?? 0) > 0 && (
-        <div
-          id="alert-carried-over-debts"
-          role="button"
-          tabIndex={0}
-          onClick={() => onNavigateTab('transactions', 'expense')}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') onNavigateTab('transactions', 'expense');
-          }}
-          className="bg-amber-950/40 border border-amber-800/80 hover:border-amber-600/80 rounded-2xl p-4 flex items-center justify-between gap-3 text-amber-200 transition-all cursor-pointer group shadow-xs"
-          title="Clique para ver os lançamentos com pendências vencidas"
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-amber-900/60 border border-amber-700/60 flex items-center justify-center text-amber-300 shrink-0">
-              <AlertTriangle size={20} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-amber-200 flex items-center gap-2">
-                <span>Pendências vencidas acumuladas do mês anterior</span>
-                <span className="text-xs px-2 py-0.5 rounded-full bg-amber-900/80 text-amber-300 border border-amber-700 font-semibold">
-                  {formatCurrency(summary.carriedOverPendingExpense ?? 0)}
-                </span>
-              </p>
-              <p className="text-xs text-amber-300/80 mt-0.5">
-                Você possui despesas do mês anterior já vencidas que continuam pendentes. Elas foram trazidas para este mês para manter todas as informações originais e o balanço acumulado preciso.
-              </p>
-            </div>
-          </div>
-          <span className="text-xs font-semibold text-amber-300 group-hover:text-amber-200 shrink-0 flex items-center gap-1">
-            Ver despesas <ChevronRight size={14} />
-          </span>
-        </div>
-      )}
-
       {/* Critical Budget Warnings Banner */}
       {criticalBudgets.length > 0 && (
         <div id="alert-budgets" className="bg-amber-950/40 border border-amber-800/60 rounded-2xl p-4 flex items-start gap-3 text-amber-200">
