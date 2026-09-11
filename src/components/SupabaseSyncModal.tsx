@@ -135,7 +135,7 @@ export const SupabaseSyncModal: React.FC<SupabaseSyncModalProps> = ({
           <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-                Status da Conexão em Tempo Real
+                Status da Conexão
               </span>
               <button
                 onClick={() => onRefreshCheck()}

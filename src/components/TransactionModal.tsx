@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, ArrowUpRight, ArrowDownRight, Check, AlertCircle, RefreshCw, Layers } from 'lucide-react';
 import { Transaction, TransactionType, PaymentMethod, Category, FinancialAccount } from '../types';
-import { getTodayString, paymentMethodLabels, addMonthsToDate } from '../utils/formatters';
+import { getTodayString, paymentMethodLabels, addMonthsToDate, isSavingsAccount } from '../utils/formatters';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -69,7 +69,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setDate(editingTransaction.date);
       setCategoryId(editingTransaction.categoryId);
       setPaymentMethod(editingTransaction.paymentMethod);
-      setAccount(editingTransaction.account.replace(/\s*\([^)]*\)/g, ''));
+      setAccount(isSavingsAccount(editingTransaction.account, accounts) ? 'Poupança' : 'Conta corrente');
       setStatus(editingTransaction.status);
       setIsRecurring(!!editingTransaction.isRecurring);
       setIsInstallment(!!editingTransaction.isInstallment);
@@ -82,7 +82,7 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
       setDate(getTodayString());
       setCategoryId(categories.find((c) => c.type === 'expense')?.id || '');
       setPaymentMethod('pix');
-      setAccount(accounts[0]?.name?.replace(/\s*\([^)]*\)/g, '') || 'Conta Principal');
+      setAccount('Conta corrente');
       setStatus('completed');
       setIsRecurring(false);
       setIsInstallment(false);
@@ -471,24 +471,22 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Conta ou Carteira
+                  Conta
                 </label>
                 <select
                   id="select-tx-account"
-                  value={account}
+                  value={isSavingsAccount(account, accounts) ? 'Poupança' : 'Conta corrente'}
                   onChange={(e) => setAccount(e.target.value)}
                   className="w-full px-3 py-2 text-sm bg-slate-950 border border-slate-700 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
                 >
-                  {accounts.map((acc) => {
-                    const cleanName = acc.name.replace(/\s*\([^)]*\)/g, '');
-                    return (
-                      <option key={acc.id} value={cleanName} className="bg-slate-900">
-                        {cleanName}
-                      </option>
-                    );
-                  })}
-                  <option value="Outra Carteira" className="bg-slate-900">Outra Carteira</option>
+                  <option value="Conta corrente" className="bg-slate-900">Conta corrente</option>
+                  <option value="Poupança" className="bg-slate-900">Poupança</option>
                 </select>
+                {isSavingsAccount(account, accounts) && (
+                  <p className="text-[11px] text-emerald-400 mt-1.5 leading-relaxed font-medium bg-emerald-950/40 border border-emerald-800/50 p-2 rounded-lg">
+                    🌱 Movimentação interna na Poupança: altera somente o saldo da poupança sem afetar o saldo acumulado geral nem receitas/despesas realizadas gerais.
+                  </p>
+                )}
               </div>
 
               <div>

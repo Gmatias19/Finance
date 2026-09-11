@@ -14,7 +14,7 @@ import {
   DEFAULT_GOALS,
   DEFAULT_ACCOUNTS,
 } from '../data/defaultData';
-import { getCurrentYearMonth, formatCurrency, formatDate, getTodayString, getAdjacentMonth } from '../utils/formatters';
+import { getCurrentYearMonth, formatCurrency, formatDate, getTodayString, getAdjacentMonth, isSavingsAccount } from '../utils/formatters';
 import { supabase } from '../utils/supabase/client';
 import {
   checkSupabaseTables,
@@ -43,6 +43,36 @@ interface StoredData {
   accounts: FinancialAccount[];
 }
 
+export const normalizeAccounts = (accs?: any[]): FinancialAccount[] => {
+  const list = Array.isArray(accs) ? accs : [];
+  const checking = list.find((a) => !isSavingsAccount(a?.name || a?.id));
+  const savings = list.find((a) => isSavingsAccount(a?.name || a?.id));
+
+  return [
+    {
+      id: 'acc_corrente',
+      name: 'Conta corrente',
+      type: 'checking',
+      balance: checking?.balance ?? 0,
+      institution: 'Conta corrente',
+      color: '#0284c7',
+    },
+    {
+      id: 'acc_poupanca',
+      name: 'Poupança',
+      type: 'savings',
+      balance: savings?.balance ?? 0,
+      institution: 'Poupança',
+      color: '#10b981',
+    },
+  ];
+};
+
+export const normalizeTransaction = (t: Transaction): Transaction => ({
+  ...t,
+  account: isSavingsAccount(t.account) ? 'Poupança' : 'Conta corrente',
+});
+
 export function useFinanceData() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -55,7 +85,7 @@ export function useFinanceData() {
   // Supabase sync state (optional auxiliary cloud backup)
   const [supabaseSync, setSupabaseSync] = useState<SupabaseSyncState>({
     status: 'checking',
-    message: 'Sincronização em tempo real ativa.',
+    message: 'Conectando ao banco de dados...',
   });
 
   // Filter state
@@ -78,7 +108,7 @@ export function useFinanceData() {
         if (Array.isArray(data.transactions)) {
           // If server already has transactions or it's not initial, adopt server state
           if (data.transactions.length > 0 || !isInitial) {
-            setTransactions(data.transactions);
+            setTransactions(data.transactions.map(normalizeTransaction));
           } else if (isInitial) {
             // First time migration: check if user had local offline data
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -86,16 +116,16 @@ export function useFinanceData() {
               try {
                 const parsed: StoredData = JSON.parse(saved);
                 if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
-                  setTransactions(parsed.transactions);
+                  setTransactions(parsed.transactions.map(normalizeTransaction));
                   // Upload to server so all users share it
                   fetch('/api/sync', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      transactions: parsed.transactions,
+                      transactions: parsed.transactions.map(normalizeTransaction),
                       budgets: parsed.budgets || [],
                       goals: parsed.goals || [],
-                      accounts: parsed.accounts || DEFAULT_ACCOUNTS,
+                      accounts: normalizeAccounts(parsed.accounts),
                       categories: parsed.categories || DEFAULT_CATEGORIES,
                     }),
                   }).catch(console.warn);
@@ -108,7 +138,7 @@ export function useFinanceData() {
         }
         if (Array.isArray(data.budgets)) setBudgets(data.budgets);
         if (Array.isArray(data.goals)) setGoals(data.goals);
-        if (Array.isArray(data.accounts) && data.accounts.length > 0) setAccounts(data.accounts);
+        if (Array.isArray(data.accounts) && data.accounts.length > 0) setAccounts(normalizeAccounts(data.accounts));
         if (Array.isArray(data.categories) && data.categories.length > 0) setCategories(data.categories);
       }
     } catch (err) {
@@ -125,11 +155,11 @@ export function useFinanceData() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed: StoredData = JSON.parse(saved);
-        if (Array.isArray(parsed.transactions)) setTransactions(parsed.transactions);
+        if (Array.isArray(parsed.transactions)) setTransactions(parsed.transactions.map(normalizeTransaction));
         if (Array.isArray(parsed.categories) && parsed.categories.length > 0) setCategories(parsed.categories);
         if (Array.isArray(parsed.budgets)) setBudgets(parsed.budgets);
         if (Array.isArray(parsed.goals)) setGoals(parsed.goals);
-        if (Array.isArray(parsed.accounts)) setAccounts(parsed.accounts);
+        if (Array.isArray(parsed.accounts)) setAccounts(normalizeAccounts(parsed.accounts));
       }
     } catch (e) {
       console.error('Failed to load local finance data', e);
@@ -147,12 +177,12 @@ export function useFinanceData() {
         if (sbTxs !== null) {
           setSupabaseSync({
             status: 'connected',
-            message: 'Conectado ao Supabase (Tempo Real Ativo)',
+            message: 'Conectado ao Supabase',
             lastSyncedAt: new Date().toISOString(),
           });
 
           if (sbTxs.length > 0) {
-            setTransactions(sbTxs);
+            setTransactions(sbTxs.map(normalizeTransaction));
           } else {
             // First time migration: if Supabase table is empty, auto-seed local/default data
             const saved = localStorage.getItem(STORAGE_KEY);
@@ -161,14 +191,14 @@ export function useFinanceData() {
               try {
                 const parsed: StoredData = JSON.parse(saved);
                 if (Array.isArray(parsed.transactions) && parsed.transactions.length > 0) {
-                  toSeed = parsed.transactions;
+                  toSeed = parsed.transactions.map(normalizeTransaction);
                 }
               } catch (e) {
                 console.warn(e);
               }
             }
-            setTransactions(toSeed);
-            upsertSupabaseTransactionsBatch(toSeed).catch(console.warn);
+            setTransactions(toSeed.map(normalizeTransaction));
+            upsertSupabaseTransactionsBatch(toSeed.map(normalizeTransaction)).catch(console.warn);
           }
 
           if (sbBudgets && sbBudgets.length > 0) setBudgets(sbBudgets);
@@ -245,7 +275,7 @@ export function useFinanceData() {
           setSupabaseSync((prev) => ({
             ...prev,
             status: 'connected',
-            message: 'Supabase Conectado em Tempo Real',
+            message: 'Supabase Conectado',
             lastSyncedAt: new Date().toISOString(),
           }));
         }
@@ -308,7 +338,7 @@ export function useFinanceData() {
     // 5. Background refresh when tab gains focus or every 8s
     const refreshAllData = async () => {
       const txs = await fetchSupabaseTransactions();
-      if (txs) setTransactions(txs);
+      if (txs) setTransactions(txs.map(normalizeTransaction));
       const bList = await fetchSupabaseBudgets();
       if (bList) setBudgets(bList);
       const gList = await fetchSupabaseGoals();
@@ -456,7 +486,7 @@ export function useFinanceData() {
     // 1. Transactions directly belonging to the target month
     const directTransactions = transactions.filter((t) => t.date.startsWith(targetMonth));
 
-    // 2. Overdue pending debts from previous months that roll over into targetMonth:
+    // 2. Overdue pending debts from previous months that roll over into targetMonth (excluding Poupança):
     // Criteria:
     // - status === 'pending'
     // - type === 'expense' (debts/despesas)
@@ -466,7 +496,7 @@ export function useFinanceData() {
     const carriedOverDebts: Transaction[] = [];
 
     transactions.forEach((t) => {
-      if (t.type === 'expense' && t.status === 'pending') {
+      if (t.type === 'expense' && t.status === 'pending' && !isSavingsAccount(t.account, accounts)) {
         const origMonth = t.date.substring(0, 7);
         if (t.date < todayStr && origMonth < targetMonth) {
           const nextMonth = getAdjacentMonth(origMonth, 1);
@@ -487,17 +517,17 @@ export function useFinanceData() {
     });
 
     return [...directTransactions, ...carriedOverDebts];
-  }, [transactions, filters.month]);
+  }, [transactions, filters.month, accounts]);
 
-  // Overall all-time balance of completed transactions
+  // Overall all-time balance of completed transactions (excluding Poupança)
   const allTimeBalance = useMemo(() => {
     return transactions.reduce((acc, t) => {
-      if (t.status === 'completed') {
+      if (t.status === 'completed' && !isSavingsAccount(t.account, accounts)) {
         return t.type === 'income' ? acc + t.amount : acc - t.amount;
       }
       return acc;
     }, 0);
-  }, [transactions]);
+  }, [transactions, accounts]);
 
   // Financial summary for selected month with cumulative balance across months
   const summary = useMemo(() => {
@@ -507,33 +537,59 @@ export function useFinanceData() {
     let pendingExpense = 0;
     let carriedOverPendingExpense = 0;
 
+    // Separate metrics for Poupança
+    let savingsIncome = 0;
+    let savingsExpense = 0;
+    let savingsPendingIncome = 0;
+    let savingsPendingExpense = 0;
+
     currentMonthTransactions.forEach((t) => {
-      if (t.type === 'income') {
-        if (t.status === 'completed') income += t.amount;
-        else pendingIncome += t.amount;
-      } else {
-        if (t.status === 'completed') {
-          expense += t.amount;
+      const isSavings = isSavingsAccount(t.account, accounts);
+
+      if (isSavings) {
+        if (t.type === 'income') {
+          if (t.status === 'completed') savingsIncome += t.amount;
+          else savingsPendingIncome += t.amount;
         } else {
-          pendingExpense += t.amount;
-          if (t.isCarriedOver) {
-            carriedOverPendingExpense += t.amount;
+          if (t.status === 'completed') savingsExpense += t.amount;
+          else savingsPendingExpense += t.amount;
+        }
+      } else {
+        if (t.type === 'income') {
+          if (t.status === 'completed') income += t.amount;
+          else pendingIncome += t.amount;
+        } else {
+          if (t.status === 'completed') {
+            expense += t.amount;
+          } else {
+            pendingExpense += t.amount;
+            if (t.isCarriedOver) {
+              carriedOverPendingExpense += t.amount;
+            }
           }
         }
       }
     });
 
-    // Monthly operational result (Receitas do mês - Despesas do mês)
+    // Monthly operational result (Receitas do mês - Despesas do mês, excluding Poupança)
     const monthlyResult = income - expense;
 
     // Previous accumulated balance: all completed transactions prior to the selected month
     let previousBalance = 0;
+    let savingsPreviousBalance = 0;
+
     if (filters.month !== 'all') {
       const startOfMonthDate = `${filters.month}-01`;
       transactions.forEach((t) => {
         if (t.status === 'completed' && t.date < startOfMonthDate) {
-          if (t.type === 'income') previousBalance += t.amount;
-          else previousBalance -= t.amount;
+          const isSavings = isSavingsAccount(t.account, accounts);
+          if (isSavings) {
+            if (t.type === 'income') savingsPreviousBalance += t.amount;
+            else savingsPreviousBalance -= t.amount;
+          } else {
+            if (t.type === 'income') previousBalance += t.amount;
+            else previousBalance -= t.amount;
+          }
         }
       });
     }
@@ -545,6 +601,21 @@ export function useFinanceData() {
 
     // Projected balance: cumulative balance + pending income - pending expenses (including carried-over debts)
     const projectedBalance = accumulatedBalance + pendingIncome - pendingExpense;
+
+    // Poupança metrics
+    const savingsMonthlyResult = savingsIncome - savingsExpense;
+
+    // All-time completed balance in Poupança
+    const savingsAllTimeBalance = transactions.reduce((acc, t) => {
+      if (t.status === 'completed' && isSavingsAccount(t.account, accounts)) {
+        return t.type === 'income' ? acc + t.amount : acc - t.amount;
+      }
+      return acc;
+    }, 0);
+
+    const savingsBalance = filters.month === 'all'
+      ? savingsAllTimeBalance
+      : savingsPreviousBalance + savingsMonthlyResult;
 
     const savingsRate = income > 0 ? Math.max(0, ((income - expense) / income) * 100) : 0;
 
@@ -560,9 +631,18 @@ export function useFinanceData() {
       netBalance: accumulatedBalance, // Backwards compatible with existing consumers of netBalance
       projectedBalance,
       savingsRate,
+      // Poupança dedicated fields
+      savingsBalance,
+      savingsIncome,
+      savingsExpense,
+      savingsMonthlyResult,
+      savingsPreviousBalance,
+      savingsAllTimeBalance,
+      savingsPendingIncome,
+      savingsPendingExpense,
       transactionCount: currentMonthTransactions.length,
     };
-  }, [currentMonthTransactions, transactions, filters.month, allTimeBalance]);
+  }, [currentMonthTransactions, transactions, filters.month, allTimeBalance, accounts]);
 
   // Filtered transactions for list view (scoped by currentMonthTransactions, with search/type/cat/status filters)
   const filteredTransactions = useMemo(() => {
@@ -612,11 +692,11 @@ export function useFinanceData() {
     });
   }, [currentMonthTransactions, filters, categoryMap]);
 
-  // Expenses grouped by category (for pie chart and budget analysis)
+  // Expenses grouped by category (for pie chart and budget analysis - excluding Poupança)
   const categoryExpenses = useMemo(() => {
     const map = new Map<string, number>();
     currentMonthTransactions
-      .filter((t) => t.type === 'expense' && t.status === 'completed')
+      .filter((t) => t.type === 'expense' && t.status === 'completed' && !isSavingsAccount(t.account, accounts))
       .forEach((t) => {
         map.set(t.categoryId, (map.get(t.categoryId) || 0) + t.amount);
       });
@@ -633,9 +713,9 @@ export function useFinanceData() {
         };
       })
       .sort((a, b) => b.amount - a.amount);
-  }, [currentMonthTransactions, categoryMap, summary.expense]);
+  }, [currentMonthTransactions, categoryMap, summary.expense, accounts]);
 
-  // Monthly flow data for recent months with cumulative balance across months
+  // Monthly flow data for recent months with cumulative balance across months (excluding Poupança)
   const monthlyTrends = useMemo(() => {
     // 1. Gather all unique months chronologically
     const monthsSet = new Set<string>();
@@ -651,7 +731,7 @@ export function useFinanceData() {
       let income = 0;
       let expense = 0;
       transactions.forEach((t) => {
-        if (t.date.startsWith(m) && t.status === 'completed') {
+        if (t.date.startsWith(m) && t.status === 'completed' && !isSavingsAccount(t.account, accounts)) {
           if (t.type === 'income') income += t.amount;
           else expense += t.amount;
         }
@@ -673,14 +753,14 @@ export function useFinanceData() {
 
     // Return the 6 most recent months for compact display
     return allMonthlyData.slice(-6);
-  }, [transactions]);
+  }, [transactions, accounts]);
 
-  // Budgets health calculation
+  // Budgets health calculation (excluding Poupança)
   const budgetsWithProgress = useMemo(() => {
     return budgets.map((b) => {
       const cat = categoryMap.get(b.categoryId);
       const spent = currentMonthTransactions
-        .filter((t) => t.categoryId === b.categoryId && t.type === 'expense')
+        .filter((t) => t.categoryId === b.categoryId && t.type === 'expense' && !isSavingsAccount(t.account, accounts))
         .reduce((sum, t) => sum + t.amount, 0);
 
       const percentage = b.monthlyLimit > 0 ? (spent / b.monthlyLimit) * 100 : 0;
@@ -695,7 +775,7 @@ export function useFinanceData() {
         isOverLimit: spent > b.monthlyLimit,
       };
     });
-  }, [budgets, categoryMap, currentMonthTransactions]);
+  }, [budgets, categoryMap, currentMonthTransactions, accounts]);
 
   // Action methods - saves locally, persists to central server and broadcasts to all users in realtime
   const addTransaction = (txData: Omit<Transaction, 'id' | 'createdAt'>) => {
@@ -1097,7 +1177,7 @@ export function useFinanceData() {
         setGoals(parsed.goals);
       }
       if (Array.isArray(parsed.accounts)) {
-        setAccounts(parsed.accounts);
+        setAccounts(normalizeAccounts(parsed.accounts));
       }
 
       // Propagate to central server
@@ -1105,11 +1185,11 @@ export function useFinanceData() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          transactions: parsed.transactions,
+          transactions: (parsed.transactions || []).map(normalizeTransaction),
           categories: parsed.categories,
           budgets: parsed.budgets,
           goals: parsed.goals,
-          accounts: parsed.accounts,
+          accounts: normalizeAccounts(parsed.accounts),
         }),
       }).catch(console.warn);
 

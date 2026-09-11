@@ -41,6 +41,12 @@ interface OverviewProps {
     netBalance: number;
     projectedBalance: number;
     savingsRate: number;
+    savingsBalance?: number;
+    savingsIncome?: number;
+    savingsExpense?: number;
+    savingsMonthlyResult?: number;
+    savingsPendingIncome?: number;
+    savingsPendingExpense?: number;
     transactionCount: number;
   };
   allTimeBalance: number;
@@ -285,26 +291,73 @@ export const Overview: React.FC<OverviewProps> = ({
           </div>
         </div>
 
-        {/* Card 4: Economia / Poupança */}
-        <div id="card-poupanca" className="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs relative overflow-hidden">
+        {/* Card 4: Saldo da Conta Poupança */}
+        <div
+          id="card-poupanca"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateTab('transactions', 'all')}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              onNavigateTab('transactions', 'all');
+            }
+          }}
+          className="bg-slate-900 p-5 rounded-2xl border border-slate-800 hover:border-emerald-600/80 shadow-xs relative overflow-hidden cursor-pointer group transition-all"
+          title="Clique para abrir lançamentos"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Taxa de Poupança
-            </span>
-            <div className="w-9 h-9 rounded-xl bg-indigo-950/60 text-indigo-400 border border-indigo-800/40 flex items-center justify-center">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-400 group-hover:text-emerald-400 uppercase tracking-wider transition-colors">
+                Saldo da Conta Poupança
+              </span>
+              <ArrowUpRight size={14} className="text-slate-500 group-hover:text-emerald-400 transition-colors" />
+            </div>
+            <div className="w-9 h-9 rounded-xl bg-emerald-950/60 text-emerald-400 border border-emerald-800/40 group-hover:border-emerald-600 flex items-center justify-center transition-colors">
               <PiggyBank size={18} />
             </div>
           </div>
           <div className="mt-3 flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-indigo-400 tracking-tight">
-              {summary.savingsRate.toFixed(1)}%
+            <span
+              className={`text-2xl font-bold tracking-tight ${
+                (summary.savingsBalance ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+              }`}
+            >
+              {formatCurrency(summary.savingsBalance ?? 0)}
             </span>
           </div>
-          <div className="mt-2 text-xs text-slate-400">
-            {summary.savingsRate >= 20 ? (
-              <span className="text-sky-400 font-medium">Meta de 20%+ alcançada</span>
+          <div className="mt-2 text-xs text-slate-400 flex items-center justify-between flex-wrap gap-1">
+            {selectedMonth !== 'all' ? (
+              <>
+                <span title="Movimentação da Poupança neste mês">
+                  No mês:{' '}
+                  <span
+                    className={`font-semibold ${
+                      (summary.savingsMonthlyResult ?? 0) >= 0 ? 'text-emerald-400' : 'text-rose-400'
+                    }`}
+                  >
+                    {(summary.savingsMonthlyResult ?? 0) >= 0 ? '+' : ''}
+                    {formatCurrency(summary.savingsMonthlyResult ?? 0)}
+                  </span>
+                </span>
+                {(summary.savingsPendingIncome ?? 0) > 0 ? (
+                  <span className="text-amber-400/90 font-medium">
+                    +{formatCurrency(summary.savingsPendingIncome ?? 0)} a depositar
+                  </span>
+                ) : (summary.savingsPendingExpense ?? 0) > 0 ? (
+                  <span className="text-amber-400/90 font-medium">
+                    -{formatCurrency(summary.savingsPendingExpense ?? 0)} a resgatar
+                  </span>
+                ) : (
+                  <span className="text-slate-400">Conta Poupança</span>
+                )}
+              </>
             ) : (
-              <span className="text-slate-400">Recomendado poupar 20%</span>
+              <>
+                <span>Acumulado Poupança:</span>
+                <span className="font-semibold text-emerald-300">
+                  {formatCurrency(summary.savingsBalance ?? 0)}
+                </span>
+              </>
             )}
           </div>
         </div>

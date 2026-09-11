@@ -17,8 +17,8 @@ import {
   AlertTriangle,
   Calendar,
 } from 'lucide-react';
-import { Transaction, Category, FilterOptions } from '../types';
-import { formatCurrency, formatDate, paymentMethodLabels } from '../utils/formatters';
+import { Transaction, Category, FilterOptions, FinancialAccount } from '../types';
+import { formatCurrency, formatDate, paymentMethodLabels, isSavingsAccount } from '../utils/formatters';
 import { CategoryIcon } from './CategoryIcon';
 
 interface TransactionsListProps {
@@ -26,6 +26,7 @@ interface TransactionsListProps {
   allTransactions?: Transaction[];
   categories: Category[];
   categoryMap: Map<string, Category>;
+  accounts?: FinancialAccount[];
   filters: FilterOptions;
   setFilters: React.Dispatch<React.SetStateAction<FilterOptions>>;
   onOpenNewTransaction: () => void;
@@ -39,6 +40,7 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
   allTransactions = [],
   categories,
   categoryMap,
+  accounts = [],
   filters,
   setFilters,
   onOpenNewTransaction,
@@ -79,31 +81,37 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
 
   const totalCount = monthScopedTransactions.length;
 
-  // Totals for completed in current filtered view
+  // Check if current search specifically targets savings
+  const isFilteringSavings = Boolean(
+    filters.search.toLowerCase().includes('poup') ||
+    filters.search.toLowerCase().includes('reserva')
+  );
+
+  // Totals for completed in current filtered view (excluding Poupança unless user explicitly filtered by it)
   const completedIncome = useMemo(() => {
     return transactions
-      .filter((t) => t.type === 'income' && t.status === 'completed')
+      .filter((t) => t.type === 'income' && t.status === 'completed' && (isFilteringSavings || !isSavingsAccount(t.account, accounts)))
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
+  }, [transactions, accounts, isFilteringSavings]);
 
   const completedExpense = useMemo(() => {
     return transactions
-      .filter((t) => t.type === 'expense' && t.status === 'completed')
+      .filter((t) => t.type === 'expense' && t.status === 'completed' && (isFilteringSavings || !isSavingsAccount(t.account, accounts)))
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
+  }, [transactions, accounts, isFilteringSavings]);
 
-  // Totals for pending in current filtered view
+  // Totals for pending in current filtered view (excluding Poupança unless user explicitly filtered by it)
   const pendingIncome = useMemo(() => {
     return transactions
-      .filter((t) => t.type === 'income' && t.status === 'pending')
+      .filter((t) => t.type === 'income' && t.status === 'pending' && (isFilteringSavings || !isSavingsAccount(t.account, accounts)))
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
+  }, [transactions, accounts, isFilteringSavings]);
 
   const pendingExpense = useMemo(() => {
     return transactions
-      .filter((t) => t.type === 'expense' && t.status === 'pending')
+      .filter((t) => t.type === 'expense' && t.status === 'pending' && (isFilteringSavings || !isSavingsAccount(t.account, accounts)))
       .reduce((acc, t) => acc + t.amount, 0);
-  }, [transactions]);
+  }, [transactions, accounts, isFilteringSavings]);
 
   const handleClearFilters = () => {
     setFilters((prev) => ({
@@ -132,17 +140,11 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
       {/* Header & Main Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-xs">
         <div>
-          <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
-              Lançamentos Financeiros
-            </h1>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-950/60 text-emerald-400 border border-emerald-800/50">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Sincronização em Tempo Real
-            </span>
-          </div>
+          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+            Lançamentos Financeiros
+          </h1>
           <p className="text-sm text-slate-400 mt-0.5">
-            Qualquer lançamento ou alteração reflete imediatamente para todos os usuários conectados
+            Gerencie suas receitas, despesas e lançamentos
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -556,7 +558,13 @@ export const TransactionsList: React.FC<TransactionsListProps> = ({
                           {paymentMethodLabels[tx.paymentMethod] || tx.paymentMethod}
                         </span>
                         <span>•</span>
-                        <span className="text-slate-500">{tx.account}</span>
+                        {isSavingsAccount(tx.account, accounts) ? (
+                          <span className="inline-flex items-center gap-1 font-semibold text-[11px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2 py-0.5 rounded-md">
+                            Poupança
+                          </span>
+                        ) : (
+                          <span className="text-slate-500">Conta corrente</span>
+                        )}
                       </div>
 
                       {tx.notes && (

@@ -115,3 +115,48 @@ export const paymentMethodLabels: Record<string, string> = {
   boleto: 'Boleto',
   other: 'Outro',
 };
+
+// Check if an account identifier or name represents a Poupança (savings) account
+export const isSavingsAccount = (accountNameOrId?: string, accounts?: any[]): boolean => {
+  if (!accountNameOrId) return false;
+  const clean = accountNameOrId
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (clean.includes('poupanca')) return true;
+
+  if (accounts && accounts.length > 0) {
+    const matched = accounts.find((a: any) => {
+      if (!a) return false;
+      const aName = (a.name || '')
+        .trim()
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      const aId = (a.id || '').toLowerCase();
+      const target = accountNameOrId.trim().toLowerCase();
+      return (
+        aId === target ||
+        aName === clean ||
+        aName.includes('poupanca') ||
+        (a.type === 'savings' && (aId === target || aName === clean))
+      );
+    });
+    if (
+      matched &&
+      (matched.type === 'savings' ||
+        (matched.name &&
+          matched.name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .includes('poupanca')))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+};

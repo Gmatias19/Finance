@@ -148,6 +148,7 @@ export default function App() {
             allTransactions={transactions}
             categories={categories}
             categoryMap={categoryMap}
+            accounts={accounts}
             filters={filters}
             setFilters={setFilters}
             onOpenNewTransaction={handleOpenNewTransaction}

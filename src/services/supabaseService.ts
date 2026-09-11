@@ -17,8 +17,7 @@ export interface SupabaseSyncState {
 export const SUPABASE_SQL_SCHEMA = `-- ==============================================================================
 -- SCRIPT SQL COMPLETO: CONTROLE FINANCEIRO (FINANCE) - SUPABASE
 -- Execute este script no "SQL Editor" do seu painel Supabase (https://supabase.com/dashboard)
--- Este script cria todas as tabelas, campos editáveis, políticas de segurança (RLS)
--- e habilita o Realtime para sincronização em tempo real entre todos os usuários.
+-- Este script cria todas as tabelas, campos editáveis e políticas de segurança (RLS).
 -- ==============================================================================
 
 -- 1. TABELA DE TRANSAÇÕES (RECEITAS E DESPESAS)
@@ -140,7 +139,7 @@ DROP POLICY IF EXISTS "Permitir acesso total em categorias" ON public.categories
 CREATE POLICY "Permitir acesso total em categorias" ON public.categories
   FOR ALL USING (true) WITH CHECK (true);
 
--- 9. HABILITAR PUBLICAÇÃO EM TEMPO REAL (SUPABASE REALTIME)
+-- 9. HABILITAR PUBLICAÇÃO SUPABASE REALTIME
 -- Faz com que qualquer inserção, alteração ou exclusão seja transmitida instantaneamente a todos os usuários conectados
 DO $$
 BEGIN

@@ -113,28 +113,20 @@ export const DEFAULT_CATEGORIES: Category[] = [
 // Contas com saldos zerados
 export const DEFAULT_ACCOUNTS: FinancialAccount[] = [
   {
-    id: 'acc_principal',
-    name: 'Conta Corrente Principal',
+    id: 'acc_corrente',
+    name: 'Conta corrente',
     type: 'checking',
     balance: 0.00,
-    institution: 'Banco Principal',
+    institution: 'Conta corrente',
     color: '#0284c7', // Azul Baleia
   },
   {
-    id: 'acc_reserva',
-    name: 'Conta Reserva / Poupança',
+    id: 'acc_poupanca',
+    name: 'Poupança',
     type: 'savings',
     balance: 0.00,
-    institution: 'Reserva',
-    color: '#0ea5e9', // Azul Céu
-  },
-  {
-    id: 'acc_carteira',
-    name: 'Carteira Dinheiro Físico',
-    type: 'wallet',
-    balance: 0.00,
-    institution: 'Dinheiro',
-    color: '#38bdf8',
+    institution: 'Poupança',
+    color: '#10b981', // Verde Esmeralda
   },
 ];
 
